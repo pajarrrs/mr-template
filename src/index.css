@@ -540,6 +540,12 @@ body {
   animation: fadeInSlide 0.25s ease forwards;
 }
 
+.copied-badge svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
 @keyframes fadeInSlide {
   from {
     opacity: 0;

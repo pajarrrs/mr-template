@@ -279,15 +279,15 @@
       const threadLinkValue = threadLink.trim() ? `* ${threadLink.trim()}` : `* ${DEFAULTS.threadLink}`;
 
       return [
-        '## Microsoft Teams Thread Link',
+        'Microsoft Teams Thread Link',
         '',
         threadLinkValue,
         '',
-        '## Deployment Steps',
+        'Deployment Steps',
         '',
         formatBullets(deploymentSteps, DEFAULTS.deploymentSteps),
         '',
-        '## Tables Need To Backup',
+        'Tables Need To Backup',
         '',
         formatBullets(tablesToBackup, DEFAULTS.tablesToBackup),
       ].join('\n');

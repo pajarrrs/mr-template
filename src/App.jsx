@@ -122,15 +122,15 @@ function generateMarkdown({ threadLink, deploymentSteps, tablesToBackup }) {
   const tablesValue = formatBullets(tablesToBackup, DEFAULTS.tablesToBackup)
 
   return [
-    '## Microsoft Teams Thread Link',
+    'Microsoft Teams Thread Link',
     '',
     threadLinkValue,
     '',
-    '## Deployment Steps',
+    'Deployment Steps',
     '',
     deploymentValue,
     '',
-    '## Tables Need To Backup',
+    'Tables Need To Backup',
     '',
     tablesValue,
   ].join('\n')
