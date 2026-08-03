@@ -7,8 +7,8 @@
 6 silly config load:file:/Users/a123/.nvm/versions/node/v24.14.1/etc/npmrc
 7 verbose title npm run dev
 8 verbose argv "run" "dev"
-9 verbose logfile logs-max:10 dir:/Users/a123/gpa/mr-template/.npm-cache/_logs/2026-08-03T03_09_09_191Z-
-10 verbose logfile /Users/a123/gpa/mr-template/.npm-cache/_logs/2026-08-03T03_09_09_191Z-debug-0.log
+9 verbose logfile logs-max:10 dir:/Users/a123/gpa/mr-template/.npm-cache/_logs/2026-08-03T03_42_58_621Z-
+10 verbose logfile /Users/a123/gpa/mr-template/.npm-cache/_logs/2026-08-03T03_42_58_621Z-debug-0.log
 11 silly logfile done cleaning log files
 12 verbose cwd /Users/a123/gpa/mr-template
 13 verbose os Darwin 25.1.0
