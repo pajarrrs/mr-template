@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Generate GitLab Merge Request descriptions easily with pre-formatted markdown output." />
+  <title>MR Description Generator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <!-- React 18 via CDN (development builds for standalone use) -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <!-- Babel for JSX (only for standalone CDN mode) -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    /* ─── CSS Variables ─── */
+    :root {
+      --bg-primary: #0d1117;
+      --bg-secondary: #161b22;
+      --bg-tertiary: #21262d;
+      --bg-card: #1c2128;
+      --bg-input: #0d1117;
+      --border-default: #30363d;
+      --border-muted: #21262d;
+      --border-focus: #388bfd;
+      --text-primary: #e6edf3;
+      --text-secondary: #8b949e;
+      --text-muted: #484f58;
+      --text-accent: #fc6d26;
+      --accent-gitlab: #fc6d26;
+      --accent-gitlab-hover: #fd7f3f;
+      --accent-green: #3fb950;
+      --accent-green-dark: #238636;
+      --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --transition: 0.18s ease;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .app { display: flex; flex-direction: column; min-height: 100vh; }
+
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, #1a1f2e 0%, #161b22 50%, #1a1f2e 100%);
+      border-bottom: 1px solid var(--border-default);
+      padding: 18px 32px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: var(--shadow-md);
+    }
+
+    .header-icon {
+      display: flex; align-items: center; justify-content: center;
+      width: 40px; height: 40px;
+      background: linear-gradient(135deg, var(--accent-gitlab), #e24329);
+      border-radius: var(--radius-sm); flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(252, 109, 38, 0.35);
+    }
+
+    .header-icon svg { width: 22px; height: 22px; fill: #fff; }
+    .header-text h1 { font-size: 1.15rem; font-weight: 700; letter-spacing: -0.3px; }
+    .header-text p { font-size: 0.78rem; color: var(--text-secondary); margin-top: 1px; }
+
+    /* Main */
+    .main-content { flex: 1; padding: 28px 24px; max-width: 1400px; width: 100%; margin: 0 auto; }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+
+    /* Panel */
+    .panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: var(--shadow-md);
+      transition: border-color var(--transition);
+    }
+    .panel:hover { border-color: #3d444d; }
+
+    .panel-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 20px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-default);
+    }
+
+    .panel-title {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 0.85rem; font-weight: 600; letter-spacing: 0.2px;
+    }
+
+    .panel-title svg { width: 16px; height: 16px; color: var(--text-secondary); }
+
+    .panel-badge {
+      font-size: 0.7rem; font-weight: 500; padding: 2px 8px;
+      border-radius: 20px; background: var(--bg-tertiary);
+      color: var(--text-secondary); border: 1px solid var(--border-muted);
+    }
+
+    .panel-body { padding: 20px; }
+
+    /* Form */
+    .field-group { margin-bottom: 22px; }
+    .field-group:last-child { margin-bottom: 0; }
+
+    .field-label {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 0.82rem; font-weight: 600; margin-bottom: 7px; letter-spacing: 0.1px;
+    }
+
+    .field-label-icon { width: 14px; height: 14px; color: var(--text-accent); }
+    .field-optional { font-size: 0.7rem; font-weight: 400; color: var(--text-muted); margin-left: 2px; }
+    .field-hint { font-size: 0.72rem; color: var(--text-secondary); margin-top: 5px; line-height: 1.5; }
+
+    .input, .textarea {
+      width: 100%;
+      background: var(--bg-input);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.865rem;
+      padding: 9px 12px;
+      outline: none;
+      transition: border-color var(--transition), box-shadow var(--transition);
+      resize: vertical;
+    }
+
+    .input:focus, .textarea:focus {
+      border-color: var(--border-focus);
+      box-shadow: 0 0 0 3px rgba(56, 139, 253, 0.12);
+    }
+
+    .input::placeholder, .textarea::placeholder { color: var(--text-muted); font-size: 0.83rem; }
+    .textarea { min-height: 100px; line-height: 1.6; }
+
+    .actions {
+      display: flex; gap: 10px; margin-top: 24px;
+      padding-top: 18px; border-top: 1px solid var(--border-muted);
+    }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 16px; border-radius: var(--radius-sm);
+      font-family: 'Inter', sans-serif; font-size: 0.82rem; font-weight: 600;
+      cursor: pointer; border: none; outline: none;
+      transition: all var(--transition); white-space: nowrap; user-select: none;
+    }
+
+    .btn svg { width: 15px; height: 15px; flex-shrink: 0; }
+
+    .btn-reset {
+      background: var(--bg-tertiary); color: var(--text-secondary);
+      border: 1px solid var(--border-default); flex: 1;
+    }
+
+    .btn-reset:hover { background: var(--bg-secondary); color: var(--text-primary); border-color: #484f58; }
+    .btn-reset:active { transform: scale(0.97); }
+
+    .preview-textarea {
+      width: 100%; min-height: 340px;
+      background: var(--bg-input);
+      border: 1px solid var(--border-muted);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-size: 0.8rem; line-height: 1.75;
+      padding: 14px; resize: vertical;
+      outline: none; overflow: auto;
+      cursor: default; white-space: pre;
+    }
+
+    .copy-btn-wrapper { margin-top: 12px; display: flex; align-items: center; gap: 10px; }
+
+    .btn-copy {
+      flex: 1;
+      background: linear-gradient(135deg, var(--accent-gitlab), #e24329);
+      color: #fff; border: none; padding: 9px 18px;
+      justify-content: center;
+      box-shadow: 0 2px 8px rgba(252, 109, 38, 0.25);
+    }
+
+    .btn-copy:hover {
+      background: linear-gradient(135deg, var(--accent-gitlab-hover), #f24e33);
+      box-shadow: 0 4px 16px rgba(252, 109, 38, 0.4);
+      transform: translateY(-1px);
+    }
+
+    .btn-copy:active { transform: translateY(0) scale(0.98); }
+
+    .btn-copy.copied {
+      background: linear-gradient(135deg, var(--accent-green), var(--accent-green-dark));
+      box-shadow: 0 2px 8px rgba(63, 185, 80, 0.3);
+    }
+
+    .copied-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 0.75rem; font-weight: 600; color: var(--accent-green);
+      animation: fadeInSlide 0.25s ease forwards;
+    }
+
+    @keyframes fadeInSlide {
+      from { opacity: 0; transform: translateX(-6px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    .char-count { font-size: 0.7rem; color: var(--text-muted); text-align: right; margin-top: 4px; }
+    .section-divider { height: 1px; background: var(--border-muted); margin: 18px 0; }
+
+    @media (max-width: 768px) {
+      .header { padding: 14px 16px; }
+      .main-content { padding: 16px 12px; }
+      .workspace { grid-template-columns: 1fr; gap: 16px; }
+      .panel-body { padding: 16px; }
+      .textarea { min-height: 80px; }
+      .preview-textarea { min-height: 260px; font-size: 0.75rem; }
+      .actions { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useCallback } = React;
+
+    // ── Inline SVG Icons ────────────────────────────────────────────────────
+
+    const GitLabIcon = () => (
+      <svg viewBox="0 0 380 380" xmlns="http://www.w3.org/2000/svg">
+        <path d="M282.83 170.73l-.27-.69-26.14-68.22a6.81 6.81 0 00-2.69-3.24 7 7 0 00-8 .43 7 7 0 00-2.32 3.52l-17.65 54H154.29l-17.65-54a6.86 6.86 0 00-2.32-3.52 7 7 0 00-8-.43 6.85 6.85 0 00-2.69 3.24L97.44 170l-.26.69a48.54 48.54 0 0016.1 56.1l.09.07.24.17 39.82 29.82 19.7 14.91 12 9.06a8.07 8.07 0 009.66 0l12-9.06 19.7-14.91 40.06-30 .1-.08a48.56 48.56 0 0016.08-56.04z"/>
+      </svg>
+    );
+
+    const LinkIcon = () => (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/>
+        <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/>
+      </svg>
+    );
+
+    const StepsIcon = () => (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
+        <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+      </svg>
+    );
+
+    const TableIcon = () => (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+        <line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/>
+        <line x1="12" y1="3" x2="12" y2="21"/>
+      </svg>
+    );
+
+    const EyeIcon = () => (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+        <circle cx="12" cy="12" r="3"/>
+      </svg>
+    );
+
+    const CopyIcon = () => (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+        <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+      </svg>
+    );
+
+    const CheckIcon = () => (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="20 6 9 17 4 12"/>
+      </svg>
+    );
+
+    const ResetIcon = () => (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="1 4 1 10 7 10"/>
+        <path d="M3.51 15a9 9 0 102.13-9.36L1 10"/>
+      </svg>
+    );
+
+    const EditIcon = () => (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+        <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+      </svg>
+    );
+
+    // ── Defaults ────────────────────────────────────────────────────────────
+
+    const DEFAULTS = {
+      threadLink: 'No Thread Link specified',
+      deploymentSteps: 'No deployment steps specified',
+      tablesToBackup: 'No tables to backup specified',
+    };
+
+    // ── Generate markdown ────────────────────────────────────────────────────
+
+    function generateMarkdown({ threadLink, deploymentSteps, tablesToBackup }) {
+      const formatBullets = (text, defaultText) => {
+        const trimmed = text.trim();
+        if (!trimmed) return `* ${defaultText}`;
+        const lines = trimmed.split('\n').filter(l => l.trim());
+        return lines.map(l => `* ${l.trim()}`).join('\n');
+      };
+
+      const threadLinkValue = threadLink.trim()
+        ? `* ${threadLink.trim()}`
+        : `* ${DEFAULTS.threadLink}`;
+
+      return [
+        '## Microsoft Teams Thread Link',
+        '',
+        threadLinkValue,
+        '',
+        '## Deployment Steps',
+        '',
+        formatBullets(deploymentSteps, DEFAULTS.deploymentSteps),
+        '',
+        '## Tables Need To Backup',
+        '',
+        formatBullets(tablesToBackup, DEFAULTS.tablesToBackup),
+      ].join('\n');
+    }
+
+    // ── App Component ─────────────────────────────────────────────────────────
+
+    const INITIAL_STATE = { threadLink: '', deploymentSteps: '', tablesToBackup: '' };
+
+    function App() {
+      const [form, setForm] = useState(INITIAL_STATE);
+      const [copied, setCopied] = useState(false);
+
+      const markdown = generateMarkdown(form);
+
+      const handleChange = useCallback((field) => (e) => {
+        setForm(prev => ({ ...prev, [field]: e.target.value }));
+      }, []);
+
+      const handleReset = useCallback(() => {
+        setForm(INITIAL_STATE);
+        setCopied(false);
+      }, []);
+
+      const handleCopy = useCallback(async () => {
+        try {
+          await navigator.clipboard.writeText(markdown);
+        } catch {
+          const el = document.createElement('textarea');
+          el.value = markdown;
+          el.style.position = 'fixed';
+          el.style.opacity = '0';
+          document.body.appendChild(el);
+          el.select();
+          document.execCommand('copy');
+          document.body.removeChild(el);
+        }
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2200);
+      }, [markdown]);
+
+      return (
+        <div className="app">
+          {/* Header */}
+          <header className="header">
+            <div className="header-icon"><GitLabIcon /></div>
+            <div className="header-text">
+              <h1>MR Description Generator</h1>
+              <p>Generate GitLab Merge Request descriptions instantly</p>
+            </div>
+          </header>
+
+          {/* Main */}
+          <main className="main-content">
+            <div className="workspace">
+
+              {/* Left: Form */}
+              <section className="panel">
+                <div className="panel-header">
+                  <span className="panel-title"><EditIcon />Input Fields</span>
+                  <span className="panel-badge">All optional</span>
+                </div>
+                <div className="panel-body">
+
+                  {/* Thread Link */}
+                  <div className="field-group">
+                    <label className="field-label" htmlFor="threadLink">
+                      <span className="field-label-icon"><LinkIcon /></span>
+                      Microsoft Teams Thread Link
+                      <span className="field-optional">optional</span>
+                    </label>
+                    <input
+                      id="threadLink"
+                      type="text"
+                      className="input"
+                      placeholder="https://teams.microsoft.com/..."
+                      value={form.threadLink}
+                      onChange={handleChange('threadLink')}
+                      autoComplete="off"
+                      spellCheck="false"
+                    />
+                    <p className="field-hint">Paste the Teams thread URL related to this MR.</p>
+                  </div>
+
+                  <div className="section-divider" />
+
+                  {/* Deployment Steps */}
+                  <div className="field-group">
+                    <label className="field-label" htmlFor="deploymentSteps">
+                      <span className="field-label-icon"><StepsIcon /></span>
+                      Deployment Steps
+                      <span className="field-optional">optional</span>
+                    </label>
+                    <textarea
+                      id="deploymentSteps"
+                      className="textarea"
+                      placeholder={`Run migration\nUpdate .env config\nRestart queue workers`}
+                      value={form.deploymentSteps}
+                      onChange={handleChange('deploymentSteps')}
+                      spellCheck="false"
+                      rows={5}
+                    />
+                    <p className="field-hint">Each line will be converted into a separate bullet point.</p>
+                  </div>
+
+                  <div className="section-divider" />
+
+                  {/* Tables to backup */}
+                  <div className="field-group">
+                    <label className="field-label" htmlFor="tablesToBackup">
+                      <span className="field-label-icon"><TableIcon /></span>
+                      Tables Need To Backup
+                      <span className="field-optional">optional</span>
+                    </label>
+                    <textarea
+                      id="tablesToBackup"
+                      className="textarea"
+                      placeholder={`users\norders\norder_items`}
+                      value={form.tablesToBackup}
+                      onChange={handleChange('tablesToBackup')}
+                      spellCheck="false"
+                      rows={4}
+                    />
+                    <p className="field-hint">List database tables that need to be backed up before deployment.</p>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="actions">
+                    <button type="button" className="btn btn-reset" onClick={handleReset} title="Clear all fields">
+                      <ResetIcon />
+                      Reset
+                    </button>
+                  </div>
+
+                </div>
+              </section>
+
+              {/* Right: Preview */}
+              <section className="panel">
+                <div className="panel-header">
+                  <span className="panel-title"><EyeIcon />Markdown Preview</span>
+                  <span className="panel-badge">Live</span>
+                </div>
+                <div className="panel-body">
+                  <textarea
+                    className="preview-textarea"
+                    readOnly
+                    value={markdown}
+                    aria-label="Markdown preview output"
+                    spellCheck="false"
+                  />
+                  <p className="char-count">{markdown.length} characters</p>
+                  <div className="copy-btn-wrapper">
+                    <button
+                      type="button"
+                      className={`btn btn-copy${copied ? ' copied' : ''}`}
+                      onClick={handleCopy}
+                      title="Copy markdown to clipboard"
+                    >
+                      {copied ? <CheckIcon /> : <CopyIcon />}
+                      {copied ? 'Copied!' : 'Copy to Clipboard'}
+                    </button>
+                    {copied && (
+                      <span className="copied-badge">
+                        <CheckIcon /> Copied to clipboard
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </section>
+
+            </div>
+          </main>
+        </div>
+      );
+    }
+
+    // ── Mount ─────────────────────────────────────────────────────────────────
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>

@@ -1,0 +1,65 @@
+0 info it worked if it ends with ok
+1 verbose cli [
+1 verbose cli   '/usr/local/bin/node',
+1 verbose cli   '/usr/local/lib/node_modules/npm/bin/npm-cli.js',
+1 verbose cli   'install'
+1 verbose cli ]
+2 info using npm@6.14.18
+3 info using node@v14.21.3
+4 verbose npm-session 19375f419a71e49d
+5 silly install runPreinstallTopLevelLifecycles
+6 silly preinstall mr-template@0.1.0
+7 info lifecycle mr-template@0.1.0~preinstall: mr-template@0.1.0
+8 silly install loadCurrentTree
+9 silly install readLocalPackageData
+10 timing stage:loadCurrentTree Completed in 132ms
+11 silly install loadIdealTree
+12 silly install cloneCurrentTreeToIdealTree
+13 timing stage:loadIdealTree:cloneCurrentTree Completed in 0ms
+14 silly install loadShrinkwrap
+15 warn read-shrinkwrap This version of npm is compatible with lockfileVersion@1, but package-lock.json was generated for lockfileVersion@3. I'll try to do my best with it!
+16 timing stage:loadIdealTree:loadShrinkwrap Completed in 36ms
+17 silly install loadAllDepsIntoIdealTree
+18 http fetch GET 200 https://registry.npmjs.org/@vitejs%2fplugin-react 11ms (from cache)
+19 silly fetchPackageMetaData error for @vitejs/plugin-react@^3.1.0 request to https://registry.npmjs.org/@vitejs/plugin-react/-/plugin-react-3.1.0.tgz failed, reason: getaddrinfo ENOTFOUND registry.npmjs.org
+20 silly removeObsoleteDep removing react@18.3.1 from the tree as its been replaced by a newer version or is no longer required
+21 silly removeObsoleteDep removing react-dom@18.3.1 from the tree as its been replaced by a newer version or is no longer required
+22 silly removeObsoleteDep removing scheduler@0.23.2 from the tree as its been replaced by a newer version or is no longer required
+23 silly removeObsoleteDep removing loose-envify@1.4.0 from the tree as its been replaced by a newer version or is no longer required
+24 silly removeObsoleteDep removing js-tokens@4.0.0 from the tree as its been replaced by a newer version or is no longer required
+25 silly fetchPackageMetaData error for react-dom@18.3.1 request to https://registry.npmjs.org/react-dom failed, reason: getaddrinfo ENOTFOUND registry.npmjs.org
+26 silly fetchPackageMetaData error for react@18.3.1 request to https://registry.npmjs.org/react failed, reason: getaddrinfo ENOTFOUND registry.npmjs.org
+27 timing stage:rollbackFailedOptional Completed in 1ms
+28 timing stage:runTopLevelLifecycles Completed in 320ms
+29 silly saveTree mr-template@0.1.0
+29 silly saveTree └─┬ vite@4.5.14
+29 silly saveTree   ├─┬ esbuild@0.18.20
+29 silly saveTree   │ └── @esbuild/darwin-arm64@0.18.20
+29 silly saveTree   ├─┬ postcss@8.5.25
+29 silly saveTree   │ ├── nanoid@3.3.16
+29 silly saveTree   │ ├── picocolors@1.1.1
+29 silly saveTree   │ └── source-map-js@1.2.1
+29 silly saveTree   └── rollup@3.30.0
+30 verbose type system
+31 verbose stack FetchError: request to https://registry.npmjs.org/react-dom failed, reason: getaddrinfo ENOTFOUND registry.npmjs.org
+31 verbose stack     at ClientRequest.<anonymous> (/usr/local/lib/node_modules/npm/node_modules/node-fetch-npm/src/index.js:68:14)
+31 verbose stack     at ClientRequest.emit (events.js:400:28)
+31 verbose stack     at TLSSocket.socketErrorListener (_http_client.js:475:9)
+31 verbose stack     at TLSSocket.emit (events.js:400:28)
+31 verbose stack     at emitErrorNT (internal/streams/destroy.js:106:8)
+31 verbose stack     at emitErrorCloseNT (internal/streams/destroy.js:74:3)
+31 verbose stack     at processTicksAndRejections (internal/process/task_queues.js:82:21)
+32 verbose cwd /Users/a123/gpa/mr-template
+33 verbose Darwin 25.1.0
+34 verbose argv "/usr/local/bin/node" "/usr/local/lib/node_modules/npm/bin/npm-cli.js" "install"
+35 verbose node v14.21.3
+36 verbose npm  v6.14.18
+37 error code ENOTFOUND
+38 error errno ENOTFOUND
+39 error network request to https://registry.npmjs.org/react-dom failed, reason: getaddrinfo ENOTFOUND registry.npmjs.org
+40 error network This is a problem related to network connectivity.
+40 error network In most cases you are behind a proxy or have bad network settings.
+40 error network
+40 error network If you are behind a proxy, please make sure that the
+40 error network 'proxy' config is set properly.  See: 'npm help config'
+41 verbose exit [ 1, true ]
