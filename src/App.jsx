@@ -897,6 +897,768 @@ export default function App() {
                 <span className="nav-badge" style={{ background: 'rgba(56, 139, 253, 0.15)', color: 'var(--accent-blue)' }}>New</span>
               </button>
             </li>
+const DatabaseIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <ellipse cx="12" cy="5" rx="9" ry="3" />
+    <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
+    <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+  </svg>
+)
+
+const CodeIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="16 18 22 12 16 6" />
+    <polyline points="8 6 2 12 8 18" />
+  </svg>
+)
+
+const PlusIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="12" y1="5" x2="12" y2="19" />
+    <line x1="5" y1="12" x2="19" y2="12" />
+  </svg>
+)
+
+// ─── SQL & Migration Helpers ──────────────────────────────────────────────
+
+function convertJsonToMigrationAndModel(tableName, jsonStr, options = { nullable: true, timestamps: true, softDeletes: false }) {
+  if (!jsonStr || !jsonStr.trim()) {
+    return { error: 'Please enter a valid JSON payload.' }
+  }
+
+  let data
+  try {
+    data = JSON.parse(jsonStr)
+  } catch (err) {
+    return { error: `Invalid JSON syntax: ${err.message}` }
+  }
+
+  if (Array.isArray(data)) {
+    data = data[0] || {}
+  }
+
+  if (typeof data !== 'object' || data === null) {
+    return { error: 'JSON payload must be an Object or Array of Objects.' }
+  }
+
+  const columns = []
+  const fillable = []
+  const casts = {}
+
+  const rawName = (tableName || 'users').trim().toLowerCase().replace(/[^a-z0-9_]/g, '_')
+  const className = rawName
+    .replace(/(?:^|_)([a-z])/g, (_, p1) => p1.toUpperCase())
+    .replace(/s$/, '')
+
+  Object.entries(data).forEach(([key, val]) => {
+    fillable.push(`'${key}'`)
+
+    if (key === 'id') {
+      columns.push(`            $table->id();`)
+      return
+    }
+
+    if (key.endsWith('_id')) {
+      const refTable = key.replace(/_id$/, 's')
+      columns.push(`            $table->foreignId('${key}')->constrained('${refTable}')->cascadeOnDelete();`)
+      casts[key] = 'integer'
+      return
+    }
+
+    const valType = typeof val
+
+    if (val === null) {
+      columns.push(`            $table->string('${key}')->nullable();`)
+    } else if (valType === 'boolean') {
+      columns.push(`            $table->boolean('${key}')${options.nullable ? '->default(false)' : ''};`)
+      casts[key] = 'boolean'
+    } else if (valType === 'number') {
+      if (Number.isInteger(val)) {
+        columns.push(`            $table->integer('${key}')${options.nullable ? '->nullable()' : ''};`)
+        casts[key] = 'integer'
+      } else {
+        columns.push(`            $table->decimal('${key}', 10, 2)${options.nullable ? '->nullable()' : ''};`)
+        casts[key] = 'float'
+      }
+    } else if (valType === 'object') {
+      columns.push(`            $table->json('${key}')${options.nullable ? '->nullable()' : ''};`)
+      casts[key] = 'array'
+    } else if (valType === 'string') {
+      if (key.endsWith('_at') || key.endsWith('_date') || /^\d{4}-\d{2}-\d{2}/.test(val)) {
+        columns.push(`            $table->timestamp('${key}')${options.nullable ? '->nullable()' : ''};`)
+        casts[key] = 'datetime'
+      } else if (val.length > 255) {
+        columns.push(`            $table->text('${key}')${options.nullable ? '->nullable()' : ''};`)
+      } else {
+        columns.push(`            $table->string('${key}')${options.nullable ? '->nullable()' : ''};`)
+      }
+    }
+  })
+
+  if (options.softDeletes) {
+    columns.push(`            $table->softDeletes();`)
+  }
+  if (options.timestamps) {
+    columns.push(`            $table->timestamps();`)
+  }
+
+  const migrationCode = `<?php
+
+use Illuminate\\Database\\Migrations\\Migration;
+use Illuminate\\Database\\Schema\\Blueprint;
+use Illuminate\\Support\\Facades\\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('${rawName}', function (Blueprint $table) {
+${columns.join('\n')}
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('${rawName}');
+    }
+};`
+
+  const castsFormatted = Object.entries(casts)
+    .map(([k, v]) => `        '${k}' => '${v}',`)
+    .join('\n')
+
+  const modelCode = `<?php
+
+namespace App\\Models;
+
+use Illuminate\\Database\\Eloquent\\Factories\\HasFactory;
+use Illuminate\\Database\\Eloquent\\Model;
+${options.softDeletes ? 'use Illuminate\\Database\\Eloquent\\SoftDeletes;\n' : ''}
+class ${className || 'SampleModel'} extends Model
+{
+    use HasFactory${options.softDeletes ? ', SoftDeletes' : ''};
+
+    protected $table = '${rawName}';
+
+    protected $fillable = [
+        ${fillable.join(',\n        ')},
+    ];
+
+    protected $casts = [
+${castsFormatted}
+    ];
+}`
+
+  return { migrationCode, modelCode }
+}
+
+function generateJsonSqlQueries(table, jsonCol, keyPath, operator, val) {
+  const tbl = (table || 'users').trim()
+  const col = (jsonCol || 'metadata').trim()
+  const path = (keyPath || 'address.city').trim()
+  const op = operator || '='
+  const v = (val || 'Jakarta').trim()
+
+  const isNumeric = !isNaN(v) && v !== ''
+  const formattedVal = isNumeric ? v : `'${v}'`
+
+  const arrowPath = path.split('.').join('->')
+  const jsonPathDollar = `$.${path}`
+
+  const mysql57 = `SELECT * FROM ${tbl}\nWHERE JSON_UNQUOTE(JSON_EXTRACT(${col}, '${jsonPathDollar}')) ${op} ${formattedVal};`
+  const mysql80 = `SELECT * FROM ${tbl}\nWHERE ${col}->>'${jsonPathDollar}' ${op} ${formattedVal};`
+  const pgSql = `SELECT * FROM ${tbl}\nWHERE ${col}->${path.split('.').map(p => `'${p}'`).join('->')} ${op} ${formattedVal};`
+
+  const modelName = tbl.replace(/(?:^|_)([a-z])/g, (_, p1) => p1.toUpperCase()).replace(/s$/, '')
+  const elo = `${modelName || 'User'}::where('${col}->${arrowPath}', '${v}')->get();`
+  const eloContains = `// Search within JSON Array / Object\nDB::table('${tbl}')\n  ->whereJsonContains('${col}->${arrowPath}', '${v}')\n  ->get();`
+  const migration = `// Laravel Migration Column\n$table->json('${col}')->nullable();`
+
+  return { mysql57, mysql80, pgSql, elo, eloContains, migration }
+}
+
+function formatRawSql(sqlStr) {
+  if (!sqlStr || !sqlStr.trim()) return ''
+  let sql = sqlStr.trim().replace(/\s+/g, ' ')
+
+  const keywords = [
+    'SELECT', 'FROM', 'WHERE', 'AND', 'OR', 'ORDER BY', 'GROUP BY',
+    'HAVING', 'LIMIT', 'OFFSET', 'JOIN', 'LEFT JOIN', 'RIGHT JOIN',
+    'INNER JOIN', 'ON', 'INSERT INTO', 'VALUES', 'UPDATE', 'SET', 'DELETE FROM'
+  ]
+
+  keywords.forEach(kw => {
+    const regex = new RegExp(`\\b${kw}\\b`, 'gi')
+    sql = sql.replace(regex, `\n${kw.toUpperCase()}`)
+  })
+
+  return sql.trim()
+}
+
+// ─── SQL & Migration Helper Component ───────────────────────────────────────
+
+function SqlQueryHelperTool() {
+  const [subTab, setSubTab] = useState('json-migration') // 'json-migration' | 'json-clause' | 'sql-format'
+
+  // Tab 1 state
+  const [tableName, setTableName] = useState('users')
+  const [jsonInput, setJsonInput] = useState(`{
+  "id": 1,
+  "name": "John Doe",
+  "email": "john@example.com",
+  "role_id": 2,
+  "is_active": true,
+  "balance": 1500.50,
+  "settings": { "theme": "dark", "notifications": true },
+  "created_at": "2026-08-06T12:00:00Z"
+}`)
+  const [options, setOptions] = useState({ nullable: true, timestamps: true, softDeletes: false })
+  const [copiedMigration, setCopiedMigration] = useState(false)
+  const [copiedModel, setCopiedModel] = useState(false)
+
+  // Tab 2 state
+  const [jsonTable, setJsonTable] = useState('users')
+  const [jsonColumn, setJsonColumn] = useState('metadata')
+  const [keyPath, setKeyPath] = useState('address.city')
+  const [operator, setOperator] = useState('=')
+  const [compareValue, setCompareValue] = useState('Jakarta')
+  const [copiedQuery, setCopiedQuery] = useState(false)
+
+  // Tab 3 state
+  const [rawSql, setRawSql] = useState('SELECT u.id, u.name, o.total FROM users u LEFT JOIN orders o ON u.id = o.user_id WHERE u.is_active = 1 AND o.status = "completed" ORDER BY o.total DESC LIMIT 10;')
+  const [copiedFormattedSql, setCopiedFormattedSql] = useState(false)
+
+  const copyToClipboard = async (text, setter) => {
+    try {
+      await navigator.clipboard.writeText(text)
+    } catch {
+      const el = document.createElement('textarea')
+      el.value = text
+      el.style.position = 'fixed'
+      el.style.opacity = '0'
+      document.body.appendChild(el)
+      el.select()
+      document.execCommand('copy')
+      document.body.removeChild(el)
+    }
+    setter(true)
+    setTimeout(() => setter(false), 2200)
+  }
+
+  const { migrationCode, modelCode, error: migrationError } = convertJsonToMigrationAndModel(tableName, jsonInput, options)
+  const jsonQueries = generateJsonSqlQueries(jsonTable, jsonColumn, keyPath, operator, compareValue)
+  const formattedSql = formatRawSql(rawSql)
+
+  return (
+    <div className="workspace">
+      {/* ── Left Panel ── */}
+      <section className="panel">
+        <div className="panel-header">
+          <span className="panel-title">
+            <DatabaseIcon />
+            SQL & Migration Inputs
+          </span>
+          <span className="panel-badge">Interactive</span>
+        </div>
+
+        <div className="panel-body">
+          {/* Sub Tab Switcher */}
+          <div className="tab-group">
+            <button
+              type="button"
+              className={`tab-btn ${subTab === 'json-migration' ? 'active' : ''}`}
+              onClick={() => setSubTab('json-migration')}
+            >
+              <TableIcon />
+              JSON to Migration
+            </button>
+            <button
+              type="button"
+              className={`tab-btn ${subTab === 'json-clause' ? 'active' : ''}`}
+              onClick={() => setSubTab('json-clause')}
+            >
+              <CodeIcon />
+              JSON SQL Clause
+            </button>
+            <button
+              type="button"
+              className={`tab-btn ${subTab === 'sql-format' ? 'active' : ''}`}
+              onClick={() => setSubTab('sql-format')}
+            >
+              <SparklesIcon />
+              SQL Formatter
+            </button>
+          </div>
+
+          {subTab === 'json-migration' && (
+            <>
+              <div className="field-group">
+                <label className="field-label" htmlFor="tableName">
+                  <span className="field-label-icon"><TableIcon /></span>
+                  Table Name
+                </label>
+                <input
+                  id="tableName"
+                  type="text"
+                  className="input"
+                  placeholder="e.g. users, orders, products"
+                  value={tableName}
+                  onChange={(e) => setTableName(e.target.value)}
+                  spellCheck="false"
+                />
+              </div>
+
+              <div className="field-group">
+                <label className="field-label" htmlFor="jsonInput">
+                  <span className="field-label-icon"><CodeIcon /></span>
+                  JSON Payload Sample
+                </label>
+                <textarea
+                  id="jsonInput"
+                  className="textarea"
+                  style={{ minHeight: '160px', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.8rem' }}
+                  placeholder="Paste JSON object here..."
+                  value={jsonInput}
+                  onChange={(e) => setJsonInput(e.target.value)}
+                  spellCheck="false"
+                />
+              </div>
+
+              <div className="preset-group">
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginRight: '4px' }}>Samples:</span>
+                <button
+                  type="button"
+                  className="preset-chip"
+                  onClick={() => {
+                    setTableName('users')
+                    setJsonInput(`{\n  "id": 1,\n  "name": "John Doe",\n  "email": "john@example.com",\n  "role_id": 2,\n  "is_active": true,\n  "balance": 1500.50,\n  "settings": { "theme": "dark", "notifications": true },\n  "created_at": "2026-08-06T12:00:00Z"\n}`)
+                  }}
+                >
+                  User Payload
+                </button>
+                <button
+                  type="button"
+                  className="preset-chip"
+                  onClick={() => {
+                    setTableName('orders')
+                    setJsonInput(`{\n  "id": 101,\n  "order_number": "ORD-2026-992",\n  "user_id": 42,\n  "total_amount": 299.99,\n  "status": "paid",\n  "items": [{ "sku": "ABC", "qty": 2 }],\n  "paid_at": "2026-08-06T10:15:00Z"\n}`)
+                  }}
+                >
+                  Order Payload
+                </button>
+              </div>
+
+              <div className="section-divider" />
+
+              <div className="field-group">
+                <label className="field-label">Options</label>
+                <div style={{ display: 'flex', gap: '16px', fontSize: '0.8rem' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={options.nullable}
+                      onChange={(e) => setOptions(o => ({ ...o, nullable: e.target.checked }))}
+                    />
+                    Nullable by default
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={options.timestamps}
+                      onChange={(e) => setOptions(o => ({ ...o, timestamps: e.target.checked }))}
+                    />
+                    $table-&gt;timestamps()
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={options.softDeletes}
+                      onChange={(e) => setOptions(o => ({ ...o, softDeletes: e.target.checked }))}
+                    />
+                    $table-&gt;softDeletes()
+                  </label>
+                </div>
+              </div>
+            </>
+          )}
+
+          {subTab === 'json-clause' && (
+            <>
+              <div className="options-grid">
+                <div>
+                  <label className="field-label">Database Table</label>
+                  <input
+                    type="text"
+                    className="input"
+                    value={jsonTable}
+                    onChange={(e) => setJsonTable(e.target.value)}
+                    placeholder="users"
+                  />
+                </div>
+                <div>
+                  <label className="field-label">JSON Column Name</label>
+                  <input
+                    type="text"
+                    className="input"
+                    value={jsonColumn}
+                    onChange={(e) => setJsonColumn(e.target.value)}
+                    placeholder="metadata"
+                  />
+                </div>
+              </div>
+
+              <div className="options-grid" style={{ marginTop: '12px' }}>
+                <div>
+                  <label className="field-label">JSON Key Path</label>
+                  <input
+                    type="text"
+                    className="input"
+                    value={keyPath}
+                    onChange={(e) => setKeyPath(e.target.value)}
+                    placeholder="address.city"
+                  />
+                </div>
+                <div>
+                  <label className="field-label">Operator</label>
+                  <select
+                    className="select-input"
+                    value={operator}
+                    onChange={(e) => setOperator(e.target.value)}
+                  >
+                    <option value="=">=</option>
+                    <option value="!=">!=</option>
+                    <option value=">">&gt;</option>
+                    <option value="<">&lt;</option>
+                    <option value="LIKE">LIKE</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ marginTop: '12px' }}>
+                <label className="field-label">Target Compare Value</label>
+                <input
+                  type="text"
+                  className="input"
+                  value={compareValue}
+                  onChange={(e) => setCompareValue(e.target.value)}
+                  placeholder="Jakarta"
+                />
+              </div>
+
+              <div className="preset-group">
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginRight: '4px' }}>Quick:</span>
+                <button
+                  type="button"
+                  className="preset-chip"
+                  onClick={() => { setJsonTable('users'); setJsonColumn('metadata'); setKeyPath('address.city'); setOperator('='); setCompareValue('Jakarta'); }}
+                >
+                  City Search
+                </button>
+                <button
+                  type="button"
+                  className="preset-chip"
+                  onClick={() => { setJsonTable('users'); setJsonColumn('settings'); setKeyPath('notifications.email'); setOperator('='); setCompareValue('true'); }}
+                >
+                  Boolean Filter
+                </button>
+                <button
+                  type="button"
+                  className="preset-chip"
+                  onClick={() => { setJsonTable('orders'); setJsonColumn('payload'); setKeyPath('pricing.total'); setOperator('>'); setCompareValue('100'); }}
+                >
+                  Numeric Query
+                </button>
+              </div>
+            </>
+          )}
+
+          {subTab === 'sql-format' && (
+            <div>
+              <div className="field-group">
+                <label className="field-label" htmlFor="rawSql">
+                  <span className="field-label-icon"><CodeIcon /></span>
+                  Paste Raw / Messy SQL Query
+                </label>
+                <textarea
+                  id="rawSql"
+                  className="textarea"
+                  style={{ minHeight: '180px', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.8rem' }}
+                  placeholder="SELECT * FROM users WHERE..."
+                  value={rawSql}
+                  onChange={(e) => setRawSql(e.target.value)}
+                  spellCheck="false"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* ── Right Panel Output ── */}
+      <section className="panel">
+        <div className="panel-header">
+          <span className="panel-title">
+            <EyeIcon />
+            Generated Output Snippets
+          </span>
+          <span className="panel-badge">Real-time</span>
+        </div>
+
+        <div className="panel-body">
+          {subTab === 'json-migration' && (
+            <>
+              {migrationError ? (
+                <div style={{ color: 'var(--accent-red)', padding: '12px', background: 'rgba(248, 81, 73, 0.1)', borderRadius: '6px' }}>
+                  {migrationError}
+                </div>
+              ) : (
+                <>
+                  <div className="field-group">
+                    <label className="field-label">
+                      <span className="field-label-icon"><TableIcon /></span>
+                      Laravel Migration File (`database/migrations/...`)
+                    </label>
+                    <textarea
+                      className="preview-textarea"
+                      readOnly
+                      value={migrationCode}
+                      spellCheck="false"
+                      style={{ minHeight: '220px' }}
+                    />
+                    <div className="copy-btn-wrapper">
+                      <button
+                        type="button"
+                        className={`btn btn-copy ${copiedMigration ? 'copied' : ''}`}
+                        onClick={() => copyToClipboard(migrationCode, setCopiedMigration)}
+                      >
+                        {copiedMigration ? <CheckIcon /> : <CopyIcon />}
+                        {copiedMigration ? 'Copied Migration!' : 'Copy Migration Code'}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="section-divider" />
+
+                  <div className="field-group">
+                    <label className="field-label">
+                      <span className="field-label-icon"><CodeIcon /></span>
+                      Laravel Eloquent Model (`app/Models/...`)
+                    </label>
+                    <textarea
+                      className="preview-textarea"
+                      readOnly
+                      value={modelCode}
+                      spellCheck="false"
+                      style={{ minHeight: '180px' }}
+                    />
+                    <div className="copy-btn-wrapper">
+                      <button
+                        type="button"
+                        className={`btn btn-copy ${copiedModel ? 'copied' : ''}`}
+                        onClick={() => copyToClipboard(modelCode, setCopiedModel)}
+                      >
+                        {copiedModel ? <CheckIcon /> : <CopyIcon />}
+                        {copiedModel ? 'Copied Model!' : 'Copy Model Code'}
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </>
+          )}
+
+          {subTab === 'json-clause' && (
+            <div>
+              <div className="hash-output-card">
+                <div className="hash-card-header">
+                  <span className="hash-card-title"><CodeIcon />Laravel Eloquent (Recommended)</span>
+                  <span className="algo-badge bcrypt">Laravel</span>
+                </div>
+                <div className="hash-code-display">{jsonQueries.elo}</div>
+              </div>
+
+              <div className="hash-output-card">
+                <div className="hash-card-header">
+                  <span className="hash-card-title"><DatabaseIcon />MySQL 8.0+ Inline Arrow (`-&gt;&gt;`)</span>
+                  <span className="algo-badge argon">MySQL 8.0</span>
+                </div>
+                <div className="hash-code-display argon">{jsonQueries.mysql80}</div>
+              </div>
+
+              <div className="hash-output-card">
+                <div className="hash-card-header">
+                  <span className="hash-card-title"><DatabaseIcon />MySQL 5.7+ JSON_EXTRACT</span>
+                  <span className="algo-badge bcrypt">MySQL 5.7</span>
+                </div>
+                <div className="hash-code-display">{jsonQueries.mysql57}</div>
+              </div>
+
+              <div className="hash-output-card">
+                <div className="hash-card-header">
+                  <span className="hash-card-title"><DatabaseIcon />PostgreSQL JSONB (`-&gt;&gt;`)</span>
+                  <span className="algo-badge argon">PostgreSQL</span>
+                </div>
+                <div className="hash-code-display argon">{jsonQueries.pgSql}</div>
+              </div>
+
+              <div className="copy-btn-wrapper">
+                <button
+                  type="button"
+                  className={`btn btn-copy ${copiedQuery ? 'copied' : ''}`}
+                  onClick={() => copyToClipboard(`${jsonQueries.elo}\n\n${jsonQueries.mysql80}`, setCopiedQuery)}
+                >
+                  {copiedQuery ? <CheckIcon /> : <CopyIcon />}
+                  {copiedQuery ? 'Copied Queries!' : 'Copy Queries'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {subTab === 'sql-format' && (
+            <div>
+              <div className="field-group">
+                <label className="field-label">
+                  <span className="field-label-icon"><SparklesIcon /></span>
+                  Formatted SQL Query
+                </label>
+                <textarea
+                  className="preview-textarea"
+                  readOnly
+                  value={formattedSql}
+                  spellCheck="false"
+                  style={{ minHeight: '260px' }}
+                />
+              </div>
+              <div className="copy-btn-wrapper">
+                <button
+                  type="button"
+                  className={`btn btn-copy ${copiedFormattedSql ? 'copied' : ''}`}
+                  onClick={() => copyToClipboard(formattedSql, setCopiedFormattedSql)}
+                >
+                  {copiedFormattedSql ? <CheckIcon /> : <CopyIcon />}
+                  {copiedFormattedSql ? 'Copied SQL!' : 'Copy Formatted SQL'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </section>
+    </div>
+  )
+}
+
+// ─── Main Component ─────────────────────────────────────────────────────────
+
+export default function App() {
+  const [activeTool, setActiveTool] = useState('gitlab-mr')
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [form, setForm] = useState(INITIAL_STATE)
+  const [copied, setCopied] = useState(false)
+
+  const markdown = generateMarkdown(form)
+
+  const handleChange = useCallback((field) => (e) => {
+    setForm(prev => ({ ...prev, [field]: e.target.value }))
+  }, [])
+
+  const handleReset = useCallback(() => {
+    setForm(INITIAL_STATE)
+    setCopied(false)
+  }, [])
+
+  const handleCopy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(markdown)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2200)
+    } catch {
+      const el = document.createElement('textarea')
+      el.value = markdown
+      el.style.position = 'fixed'
+      el.style.opacity = '0'
+      document.body.appendChild(el)
+      el.select()
+      document.execCommand('copy')
+      document.body.removeChild(el)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2200)
+    }
+  }, [markdown])
+
+  return (
+    <div className="app-container">
+
+      {/* ── Overlay for Mobile ── */}
+      {sidebarOpen && (
+        <div
+          className="sidebar-overlay"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* ── Sidebar ── */}
+      <aside className={`sidebar ${sidebarOpen ? 'mobile-open' : ''}`}>
+        <div className="sidebar-header">
+          <div className="brand-icon">
+            <WorktoolsIcon />
+          </div>
+          <div>
+            <h2 className="brand-title">Worktools</h2>
+            <p className="brand-subtitle">Developer Utilities</p>
+          </div>
+        </div>
+
+        <nav className="sidebar-nav">
+          <div className="nav-section-title">Git & Code Tools</div>
+          <ul className="nav-list">
+            <li>
+              <button
+                type="button"
+                className={`nav-item-btn ${activeTool === 'gitlab-mr' ? 'active' : ''}`}
+                onClick={() => {
+                  setActiveTool('gitlab-mr')
+                  setSidebarOpen(false)
+                }}
+              >
+                <span className="nav-icon"><GitLabIcon /></span>
+                GitLab MR Generator
+                <span className="nav-badge">Active</span>
+              </button>
+            </li>
+            <li>
+              <button
+                type="button"
+                className={`nav-item-btn ${activeTool === 'hash-gen' ? 'active' : ''}`}
+                onClick={() => {
+                  setActiveTool('hash-gen')
+                  setSidebarOpen(false)
+                }}
+              >
+                <span className="nav-icon"><HashIcon /></span>
+                Hash:: Generator
+                <span className="nav-badge" style={{ background: 'rgba(56, 139, 253, 0.15)', color: 'var(--accent-blue)' }}>New</span>
+              </button>
+            </li>
+            <li>
+              <button
+                type="button"
+                className={`nav-item-btn ${activeTool === 'sql-helper' ? 'active' : ''}`}
+                onClick={() => {
+                  setActiveTool('sql-helper')
+                  setSidebarOpen(false)
+                }}
+              >
+                <span className="nav-icon"><DatabaseIcon /></span>
+                SQL / Migration Helper
+                <span className="nav-badge" style={{ background: 'rgba(63, 185, 80, 0.15)', color: 'var(--accent-green)' }}>New</span>
+              </button>
+            </li>
             <li>
               <button
                 type="button"
@@ -934,12 +1696,33 @@ export default function App() {
               <MenuIcon />
             </button>
             <div className="header-title-group">
-              <div className="header-icon" style={activeTool === 'hash-gen' ? { background: 'linear-gradient(135deg, #388bfd, #1f6beb)', boxShadow: '0 2px 8px rgba(56, 139, 253, 0.35)' } : {}}>
-                {activeTool === 'hash-gen' ? <HashIcon /> : <GitLabIcon />}
+              <div
+                className="header-icon"
+                style={
+                  activeTool === 'hash-gen'
+                    ? { background: 'linear-gradient(135deg, #388bfd, #1f6beb)', boxShadow: '0 2px 8px rgba(56, 139, 253, 0.35)' }
+                    : activeTool === 'sql-helper'
+                    ? { background: 'linear-gradient(135deg, #3fb950, #238636)', boxShadow: '0 2px 8px rgba(63, 185, 80, 0.35)' }
+                    : {}
+                }
+              >
+                {activeTool === 'hash-gen' ? <HashIcon /> : activeTool === 'sql-helper' ? <DatabaseIcon /> : <GitLabIcon />}
               </div>
               <div className="header-text">
-                <h1>{activeTool === 'hash-gen' ? 'Hash:: Generator' : 'MR Description Generator'}</h1>
-                <p>{activeTool === 'hash-gen' ? 'Generate Laravel Hash::make() compatible Bcrypt ($2y$) and Argon2id ($argon2id$) password hashes' : 'Generate GitLab Merge Request descriptions instantly'}</p>
+                <h1>
+                  {activeTool === 'hash-gen'
+                    ? 'Hash:: Generator'
+                    : activeTool === 'sql-helper'
+                    ? 'SQL & Migration Helper'
+                    : 'MR Description Generator'}
+                </h1>
+                <p>
+                  {activeTool === 'hash-gen'
+                    ? 'Generate Laravel Hash::make() compatible Bcrypt ($2y$) and Argon2id ($argon2id$) password hashes'
+                    : activeTool === 'sql-helper'
+                    ? 'Convert JSON to Laravel Migrations & Models, build JSON SQL queries, and format SQL'
+                    : 'Generate GitLab Merge Request descriptions instantly'}
+                </p>
               </div>
             </div>
           </div>
@@ -1088,6 +1871,8 @@ export default function App() {
             </div>
           ) : activeTool === 'hash-gen' ? (
             <HashGeneratorTool />
+          ) : activeTool === 'sql-helper' ? (
+            <SqlQueryHelperTool />
           ) : (
             <div className="placeholder-tool">
               <PlusIcon />
@@ -1101,5 +1886,6 @@ export default function App() {
     </div>
   )
 }
+
 
 
