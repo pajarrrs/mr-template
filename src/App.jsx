@@ -915,7 +915,7 @@ export default function App() {
         </nav>
 
         <div className="sidebar-footer">
-          Worktools Suite &copy; {new Date().getFullYear()}
+          GG AI &copy; {new Date().getFullYear()}
         </div>
       </aside>
 
