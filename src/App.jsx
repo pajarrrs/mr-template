@@ -805,98 +805,8 @@ function HashGeneratorTool() {
   )
 }
 
-// ─── Main Component ─────────────────────────────────────────────────────────
+// ─── SQL & Migration Helpers & Components ─────────────────────────────────
 
-export default function App() {
-  const [activeTool, setActiveTool] = useState('gitlab-mr')
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [form, setForm] = useState(INITIAL_STATE)
-  const [copied, setCopied] = useState(false)
-
-  const markdown = generateMarkdown(form)
-
-  const handleChange = useCallback((field) => (e) => {
-    setForm(prev => ({ ...prev, [field]: e.target.value }))
-  }, [])
-
-  const handleReset = useCallback(() => {
-    setForm(INITIAL_STATE)
-    setCopied(false)
-  }, [])
-
-  const handleCopy = useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(markdown)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2200)
-    } catch {
-      const el = document.createElement('textarea')
-      el.value = markdown
-      el.style.position = 'fixed'
-      el.style.opacity = '0'
-      document.body.appendChild(el)
-      el.select()
-      document.execCommand('copy')
-      document.body.removeChild(el)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2200)
-    }
-  }, [markdown])
-
-  return (
-    <div className="app-container">
-
-      {/* ── Overlay for Mobile ── */}
-      {sidebarOpen && (
-        <div
-          className="sidebar-overlay"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* ── Sidebar ── */}
-      <aside className={`sidebar ${sidebarOpen ? 'mobile-open' : ''}`}>
-        <div className="sidebar-header">
-          <div className="brand-icon">
-            <WorktoolsIcon />
-          </div>
-          <div>
-            <h2 className="brand-title">Worktools</h2>
-            <p className="brand-subtitle">Developer Utilities</p>
-          </div>
-        </div>
-
-        <nav className="sidebar-nav">
-          <div className="nav-section-title">Git & Code Tools</div>
-          <ul className="nav-list">
-            <li>
-              <button
-                type="button"
-                className={`nav-item-btn ${activeTool === 'gitlab-mr' ? 'active' : ''}`}
-                onClick={() => {
-                  setActiveTool('gitlab-mr')
-                  setSidebarOpen(false)
-                }}
-              >
-                <span className="nav-icon"><GitLabIcon /></span>
-                GitLab MR Generator
-                <span className="nav-badge">Active</span>
-              </button>
-            </li>
-            <li>
-              <button
-                type="button"
-                className={`nav-item-btn ${activeTool === 'hash-gen' ? 'active' : ''}`}
-                onClick={() => {
-                  setActiveTool('hash-gen')
-                  setSidebarOpen(false)
-                }}
-              >
-                <span className="nav-icon"><HashIcon /></span>
-                Hash:: Generator
-                <span className="nav-badge" style={{ background: 'rgba(56, 139, 253, 0.15)', color: 'var(--accent-blue)' }}>New</span>
-              </button>
-            </li>
 const DatabaseIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <ellipse cx="12" cy="5" rx="9" ry="3" />
@@ -905,23 +815,7 @@ const DatabaseIcon = () => (
   </svg>
 )
 
-const CodeIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="16 18 22 12 16 6" />
-    <polyline points="8 6 2 12 8 18" />
-  </svg>
-)
-
-const PlusIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="12" y1="5" x2="12" y2="19" />
-    <line x1="5" y1="12" x2="19" y2="12" />
-  </svg>
-)
-
-// ─── SQL & Migration Helpers ──────────────────────────────────────────────
-
-function convertJsonToMigrationAndModel(tableName, jsonStr, options = { nullable: true, timestamps: true, softDeletes: false }) {
+function convertJsonToMigrationAndModel(tableName, jsonStr, options = { nullable: true, timestamps: true, softDeletes: false, addIndexes: true, compositeIndex: false }) {
   if (!jsonStr || !jsonStr.trim()) {
     return { error: 'Please enter a valid JSON payload.' }
   }
@@ -944,6 +838,8 @@ function convertJsonToMigrationAndModel(tableName, jsonStr, options = { nullable
   const columns = []
   const fillable = []
   const casts = {}
+  const foreignKeys = []
+  let statusOrTypeKey = null
 
   const rawName = (tableName || 'users').trim().toLowerCase().replace(/[^a-z0-9_]/g, '_')
   const className = rawName
@@ -959,25 +855,34 @@ function convertJsonToMigrationAndModel(tableName, jsonStr, options = { nullable
     }
 
     if (key.endsWith('_id')) {
+      foreignKeys.push(key)
       const refTable = key.replace(/_id$/, 's')
-      columns.push(`            $table->foreignId('${key}')->constrained('${refTable}')->cascadeOnDelete();`)
+      const idxSuffix = options.addIndexes ? '->index()' : ''
+      columns.push(`            $table->foreignId('${key}')->constrained('${refTable}')->cascadeOnDelete()${idxSuffix};`)
       casts[key] = 'integer'
       return
     }
 
     const valType = typeof val
+    const shouldIndex = options.addIndexes && ['email', 'status', 'type', 'slug', 'code', 'sku', 'uuid'].includes(key.toLowerCase())
+
+    if (shouldIndex && !statusOrTypeKey) {
+      statusOrTypeKey = key
+    }
+
+    const idxChain = shouldIndex ? '->index()' : ''
 
     if (val === null) {
-      columns.push(`            $table->string('${key}')->nullable();`)
+      columns.push(`            $table->string('${key}')->nullable()${idxChain};`)
     } else if (valType === 'boolean') {
-      columns.push(`            $table->boolean('${key}')${options.nullable ? '->default(false)' : ''};`)
+      columns.push(`            $table->boolean('${key}')${options.nullable ? '->default(false)' : ''}${idxChain};`)
       casts[key] = 'boolean'
     } else if (valType === 'number') {
       if (Number.isInteger(val)) {
-        columns.push(`            $table->integer('${key}')${options.nullable ? '->nullable()' : ''};`)
+        columns.push(`            $table->integer('${key}')${options.nullable ? '->nullable()' : ''}${idxChain};`)
         casts[key] = 'integer'
       } else {
-        columns.push(`            $table->decimal('${key}', 10, 2)${options.nullable ? '->nullable()' : ''};`)
+        columns.push(`            $table->decimal('${key}', 10, 2)${options.nullable ? '->nullable()' : ''}${idxChain};`)
         casts[key] = 'float'
       }
     } else if (valType === 'object') {
@@ -985,12 +890,12 @@ function convertJsonToMigrationAndModel(tableName, jsonStr, options = { nullable
       casts[key] = 'array'
     } else if (valType === 'string') {
       if (key.endsWith('_at') || key.endsWith('_date') || /^\d{4}-\d{2}-\d{2}/.test(val)) {
-        columns.push(`            $table->timestamp('${key}')${options.nullable ? '->nullable()' : ''};`)
+        columns.push(`            $table->timestamp('${key}')${options.nullable ? '->nullable()' : ''}${idxChain};`)
         casts[key] = 'datetime'
       } else if (val.length > 255) {
         columns.push(`            $table->text('${key}')${options.nullable ? '->nullable()' : ''};`)
       } else {
-        columns.push(`            $table->string('${key}')${options.nullable ? '->nullable()' : ''};`)
+        columns.push(`            $table->string('${key}')${options.nullable ? '->nullable()' : ''}${idxChain};`)
       }
     }
   })
@@ -1000,6 +905,14 @@ function convertJsonToMigrationAndModel(tableName, jsonStr, options = { nullable
   }
   if (options.timestamps) {
     columns.push(`            $table->timestamps();`)
+  }
+
+  if (options.compositeIndex) {
+    const compCol1 = foreignKeys[0] || statusOrTypeKey || 'id'
+    const compCol2 = options.timestamps ? 'created_at' : 'id'
+    if (compCol1 !== compCol2) {
+      columns.push(`\n            // Composite Index for speed optimization\n            $table->index(['${compCol1}', '${compCol2}']);`)
+    }
   }
 
   const migrationCode = `<?php
@@ -1058,29 +971,84 @@ ${castsFormatted}
   return { migrationCode, modelCode }
 }
 
-function generateJsonSqlQueries(table, jsonCol, keyPath, operator, val) {
+function generateSqlQueries(table, colType, jsonCol, keyPath, operator, val) {
   const tbl = (table || 'users').trim()
+  const isJson = colType === 'json'
   const col = (jsonCol || 'metadata').trim()
-  const path = (keyPath || 'address.city').trim()
-  const op = operator || '='
-  const v = (val || 'Jakarta').trim()
+  const path = (keyPath || (isJson ? 'pricing.total' : 'company_id')).trim()
+  const op = (operator || '=').trim()
+  const v = (val || '1').trim()
 
-  const isNumeric = !isNaN(v) && v !== ''
-  const formattedVal = isNumeric ? v : `'${v}'`
-
-  const arrowPath = path.split('.').join('->')
-  const jsonPathDollar = `$.${path}`
-
-  const mysql57 = `SELECT * FROM ${tbl}\nWHERE JSON_UNQUOTE(JSON_EXTRACT(${col}, '${jsonPathDollar}')) ${op} ${formattedVal};`
-  const mysql80 = `SELECT * FROM ${tbl}\nWHERE ${col}->>'${jsonPathDollar}' ${op} ${formattedVal};`
-  const pgSql = `SELECT * FROM ${tbl}\nWHERE ${col}->${path.split('.').map(p => `'${p}'`).join('->')} ${op} ${formattedVal};`
-
+  const isNumeric = !isNaN(v) && v !== '' && !v.includes(',')
   const modelName = tbl.replace(/(?:^|_)([a-z])/g, (_, p1) => p1.toUpperCase()).replace(/s$/, '')
-  const elo = `${modelName || 'User'}::where('${col}->${arrowPath}', '${v}')->get();`
-  const eloContains = `// Search within JSON Array / Object\nDB::table('${tbl}')\n  ->whereJsonContains('${col}->${arrowPath}', '${v}')\n  ->get();`
-  const migration = `// Laravel Migration Column\n$table->json('${col}')->nullable();`
 
-  return { mysql57, mysql80, pgSql, elo, eloContains, migration }
+  let mysql57 = ''
+  let pgSql = ''
+  let elo = ''
+
+  if (!isJson) {
+    // ── Standard Column Queries (e.g. company_id = 1) ───────────────────────
+    if (op === 'IN') {
+      const items = v.split(',').map(s => s.trim())
+      const formattedItemsSql = items.map(i => (!isNaN(i) && i !== '' ? i : `'${i}'`)).join(', ')
+      const formattedItemsElo = items.map(i => (!isNaN(i) && i !== '' ? (Number(i) || `'${i}'`) : `'${i}'`)).join(', ')
+
+      mysql57 = `SELECT * FROM ${tbl}\nWHERE ${path} IN (${formattedItemsSql});`
+      pgSql = `SELECT * FROM ${tbl}\nWHERE ${path} IN (${formattedItemsSql});`
+      elo = `${modelName || 'User'}::whereIn('${path}', [${formattedItemsElo}])->get();`
+    } else if (op === 'LIKE') {
+      const likeVal = `%${v}%`
+      mysql57 = `SELECT * FROM ${tbl}\nWHERE ${path} LIKE '${likeVal}';`
+      pgSql = `SELECT * FROM ${tbl}\nWHERE ${path} LIKE '${likeVal}';`
+      elo = `${modelName || 'User'}::where('${path}', 'LIKE', '${likeVal}')->get();`
+    } else if (op === 'OR') {
+      const formattedVal = isNumeric ? v : `'${v}'`
+      mysql57 = `SELECT * FROM ${tbl}\nWHERE status = 'active' OR ${path} = ${formattedVal};`
+      pgSql = `SELECT * FROM ${tbl}\nWHERE status = 'active' OR ${path} = ${formattedVal};`
+      elo = `${modelName || 'User'}::orWhere('${path}', ${isNumeric ? v : `'${v}'`})->get();`
+    } else {
+      const formattedVal = isNumeric ? v : `'${v}'`
+      mysql57 = `SELECT * FROM ${tbl}\nWHERE ${path} ${op} ${formattedVal};`
+      pgSql = `SELECT * FROM ${tbl}\nWHERE ${path} ${op} ${formattedVal};`
+      elo = `${modelName || 'User'}::where('${path}', ${isNumeric ? v : `'${v}'`})->get();`
+    }
+  } else {
+    // ── JSON Column Queries (metadata->'$.company_id') ──────────────────────
+    const arrowPath = path.split('.').join('->')
+    const jsonPathDollar = `$.${path}`
+
+    if (op === 'IN') {
+      const items = v.split(',').map(s => s.trim())
+      const formattedItemsSql = items.map(i => (!isNaN(i) && i !== '' ? i : `'${i}'`)).join(', ')
+      const formattedItemsElo = items.map(i => (!isNaN(i) && i !== '' ? (Number(i) || `'${i}'`) : `'${i}'`)).join(', ')
+
+      mysql57 = `SELECT * FROM ${tbl}\nWHERE JSON_UNQUOTE(JSON_EXTRACT(${col}, '${jsonPathDollar}')) IN (${formattedItemsSql});`
+      pgSql = `SELECT * FROM ${tbl}\nWHERE ${col}->${path.split('.').map(p => `'${p}'`).join('->')} IN (${formattedItemsSql});`
+      elo = `${modelName || 'User'}::whereIn('${col}->${arrowPath}', [${formattedItemsElo}])->get();`
+    } else if (op === 'LIKE') {
+      const likeVal = `%${v}%`
+      mysql57 = `SELECT * FROM ${tbl}\nWHERE JSON_UNQUOTE(JSON_EXTRACT(${col}, '${jsonPathDollar}')) LIKE '${likeVal}';`
+      pgSql = `SELECT * FROM ${tbl}\nWHERE ${col}->${path.split('.').map(p => `'${p}'`).join('->')} LIKE '${likeVal}';`
+      elo = `${modelName || 'User'}::where('${col}->${arrowPath}', 'LIKE', '${likeVal}')->get();`
+    } else if (op === 'OR') {
+      const formattedVal = isNumeric ? v : `'${v}'`
+      mysql57 = `SELECT * FROM ${tbl}\nWHERE status = 'active' OR JSON_UNQUOTE(JSON_EXTRACT(${col}, '${jsonPathDollar}')) = ${formattedVal};`
+      pgSql = `SELECT * FROM ${tbl}\nWHERE status = 'active' OR ${col}->${path.split('.').map(p => `'${p}'`).join('->')} = ${formattedVal};`
+      elo = `${modelName || 'User'}::orWhere('${col}->${arrowPath}', ${isNumeric ? v : `'${v}'`})->get();`
+    } else if (op === 'CONTAINS') {
+      const jsonVal = isNumeric ? v : `"${v}"`
+      mysql57 = `SELECT * FROM ${tbl}\nWHERE JSON_CONTAINS(${col}, '${jsonVal}', '${jsonPathDollar}');`
+      pgSql = `SELECT * FROM ${tbl}\nWHERE ${col} @> '{"${path.split('.').join('": {"')}": ${jsonVal}${'}'.repeat(path.split('.').length)}';`
+      elo = `${modelName || 'User'}::whereJsonContains('${col}->${arrowPath}', ${isNumeric ? v : `'${v}'`})->get();`
+    } else {
+      const formattedVal = isNumeric ? v : `'${v}'`
+      mysql57 = `SELECT * FROM ${tbl}\nWHERE JSON_UNQUOTE(JSON_EXTRACT(${col}, '${jsonPathDollar}')) ${op} ${formattedVal};`
+      pgSql = `SELECT * FROM ${tbl}\nWHERE ${col}->${path.split('.').map(p => `'${p}'`).join('->')} ${op} ${formattedVal};`
+      elo = `${modelName || 'User'}::where('${col}->${arrowPath}', ${isNumeric ? v : `'${v}'`})->get();`
+    }
+  }
+
+  return { mysql57, pgSql, elo }
 }
 
 function formatRawSql(sqlStr) {
@@ -1101,37 +1069,24 @@ function formatRawSql(sqlStr) {
   return sql.trim()
 }
 
-// ─── SQL & Migration Helper Component ───────────────────────────────────────
-
 function SqlQueryHelperTool() {
-  const [subTab, setSubTab] = useState('json-migration') // 'json-migration' | 'json-clause' | 'sql-format'
+  const [subTab, setSubTab] = useState('json-clause')
 
-  // Tab 1 state
-  const [tableName, setTableName] = useState('users')
-  const [jsonInput, setJsonInput] = useState(`{
-  "id": 1,
-  "name": "John Doe",
-  "email": "john@example.com",
-  "role_id": 2,
-  "is_active": true,
-  "balance": 1500.50,
-  "settings": { "theme": "dark", "notifications": true },
-  "created_at": "2026-08-06T12:00:00Z"
-}`)
-  const [options, setOptions] = useState({ nullable: true, timestamps: true, softDeletes: false })
+  const [tableName, setTableName] = useState('orders')
+  const [jsonInput, setJsonInput] = useState(`{\n  "id": 101,\n  "order_number": "ORD-2026-992",\n  "user_id": 42,\n  "status": "completed",\n  "total_amount": 299.99,\n  "payload": {\n    "pricing": { "total": 100 },\n    "items": ["SKU-100", "SKU-200"]\n  },\n  "created_at": "2026-08-06T10:15:00Z"\n}`)
+  const [options, setOptions] = useState({ nullable: true, timestamps: true, softDeletes: false, addIndexes: true, compositeIndex: true })
   const [copiedMigration, setCopiedMigration] = useState(false)
   const [copiedModel, setCopiedModel] = useState(false)
 
-  // Tab 2 state
+  const [colType, setColType] = useState('standard') // 'standard' | 'json'
   const [jsonTable, setJsonTable] = useState('users')
   const [jsonColumn, setJsonColumn] = useState('metadata')
-  const [keyPath, setKeyPath] = useState('address.city')
+  const [keyPath, setKeyPath] = useState('company_id')
   const [operator, setOperator] = useState('=')
-  const [compareValue, setCompareValue] = useState('Jakarta')
+  const [compareValue, setCompareValue] = useState('1')
   const [copiedQuery, setCopiedQuery] = useState(false)
 
-  // Tab 3 state
-  const [rawSql, setRawSql] = useState('SELECT u.id, u.name, o.total FROM users u LEFT JOIN orders o ON u.id = o.user_id WHERE u.is_active = 1 AND o.status = "completed" ORDER BY o.total DESC LIMIT 10;')
+  const [rawSql, setRawSql] = useState('SELECT u.id, u.name, u.company_id FROM users u WHERE u.company_id = 1 AND u.status = "active" ORDER BY u.id DESC LIMIT 10;')
   const [copiedFormattedSql, setCopiedFormattedSql] = useState(false)
 
   const copyToClipboard = async (text, setter) => {
@@ -1152,12 +1107,11 @@ function SqlQueryHelperTool() {
   }
 
   const { migrationCode, modelCode, error: migrationError } = convertJsonToMigrationAndModel(tableName, jsonInput, options)
-  const jsonQueries = generateJsonSqlQueries(jsonTable, jsonColumn, keyPath, operator, compareValue)
+  const jsonQueries = generateSqlQueries(jsonTable, colType, jsonColumn, keyPath, operator, compareValue)
   const formattedSql = formatRawSql(rawSql)
 
   return (
     <div className="workspace">
-      {/* ── Left Panel ── */}
       <section className="panel">
         <div className="panel-header">
           <span className="panel-title">
@@ -1168,8 +1122,15 @@ function SqlQueryHelperTool() {
         </div>
 
         <div className="panel-body">
-          {/* Sub Tab Switcher */}
           <div className="tab-group">
+            <button
+              type="button"
+              className={`tab-btn ${subTab === 'json-clause' ? 'active' : ''}`}
+              onClick={() => setSubTab('json-clause')}
+            >
+              <CodeIcon />
+              SQL Query Builder
+            </button>
             <button
               type="button"
               className={`tab-btn ${subTab === 'json-migration' ? 'active' : ''}`}
@@ -1180,14 +1141,6 @@ function SqlQueryHelperTool() {
             </button>
             <button
               type="button"
-              className={`tab-btn ${subTab === 'json-clause' ? 'active' : ''}`}
-              onClick={() => setSubTab('json-clause')}
-            >
-              <CodeIcon />
-              JSON SQL Clause
-            </button>
-            <button
-              type="button"
               className={`tab-btn ${subTab === 'sql-format' ? 'active' : ''}`}
               onClick={() => setSubTab('sql-format')}
             >
@@ -1195,6 +1148,143 @@ function SqlQueryHelperTool() {
               SQL Formatter
             </button>
           </div>
+
+          {subTab === 'json-clause' && (
+            <>
+              <div className="field-group">
+                <label className="field-label">Target Column Type</label>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    type="button"
+                    className={`btn ${colType === 'standard' ? 'btn-primary' : 'btn-reset'}`}
+                    style={{ flex: 1, padding: '8px 12px', fontSize: '0.8rem' }}
+                    onClick={() => { setColType('standard'); setKeyPath('company_id'); setCompareValue('1'); }}
+                  >
+                    Standard Column (e.g. company_id)
+                  </button>
+                  <button
+                    type="button"
+                    className={`btn ${colType === 'json' ? 'btn-primary' : 'btn-reset'}`}
+                    style={{ flex: 1, padding: '8px 12px', fontSize: '0.8rem' }}
+                    onClick={() => { setColType('json'); setJsonColumn('payload'); setKeyPath('pricing.total'); setCompareValue('100'); }}
+                  >
+                    JSON Column (e.g. payload.key)
+                  </button>
+                </div>
+              </div>
+
+              <div className="options-grid" style={{ marginTop: '12px' }}>
+                <div>
+                  <label className="field-label">Database Table</label>
+                  <input
+                    type="text"
+                    className="input"
+                    value={jsonTable}
+                    onChange={(e) => setJsonTable(e.target.value)}
+                    placeholder="users"
+                  />
+                </div>
+                {colType === 'json' ? (
+                  <div>
+                    <label className="field-label">JSON Column Name</label>
+                    <input
+                      type="text"
+                      className="input"
+                      value={jsonColumn}
+                      onChange={(e) => setJsonColumn(e.target.value)}
+                      placeholder="payload"
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <label className="field-label">Column Name</label>
+                    <input
+                      type="text"
+                      className="input"
+                      value={keyPath}
+                      onChange={(e) => setKeyPath(e.target.value)}
+                      placeholder="company_id"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="options-grid" style={{ marginTop: '12px' }}>
+                {colType === 'json' && (
+                  <div>
+                    <label className="field-label">JSON Key Path</label>
+                    <input
+                      type="text"
+                      className="input"
+                      value={keyPath}
+                      onChange={(e) => setKeyPath(e.target.value)}
+                      placeholder="pricing.total"
+                    />
+                  </div>
+                )}
+                <div style={colType !== 'json' ? { gridColumn: 'span 2' } : {}}>
+                  <label className="field-label">Query Operator / Clause</label>
+                  <select
+                    className="select-input"
+                    value={operator}
+                    onChange={(e) => setOperator(e.target.value)}
+                  >
+                    <option value="=">= (WHERE {keyPath || 'company_id'} = {compareValue || '1'})</option>
+                    <option value="IN">WHERE IN (1, 2, 3)</option>
+                    <option value="LIKE">LIKE (WHERE {keyPath || 'name'} LIKE %val%)</option>
+                    <option value="OR">OR WHERE (orWhere)</option>
+                    {colType === 'json' && <option value="CONTAINS">whereJsonContains</option>}
+                    <option value="!=">!= (Not Equal)</option>
+                    <option value=">">&gt; (Greater Than)</option>
+                    <option value="<">&lt; (Less Than)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ marginTop: '12px' }}>
+                <label className="field-label">Compare Value (comma-separated list for IN)</label>
+                <input
+                  type="text"
+                  className="input"
+                  value={compareValue}
+                  onChange={(e) => setCompareValue(e.target.value)}
+                  placeholder="1"
+                />
+              </div>
+
+              <div className="preset-group">
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginRight: '4px' }}>Presets:</span>
+                <button
+                  type="button"
+                  className="preset-chip"
+                  onClick={() => { setColType('standard'); setJsonTable('users'); setKeyPath('company_id'); setOperator('='); setCompareValue('1'); }}
+                >
+                  WHERE company_id = 1
+                </button>
+                <button
+                  type="button"
+                  className="preset-chip"
+                  onClick={() => { setColType('standard'); setJsonTable('users'); setKeyPath('company_id'); setOperator('IN'); setCompareValue('1, 2, 3'); }}
+                >
+                  WHERE company_id IN (1, 2, 3)
+                </button>
+                <button
+                  type="button"
+                  className="preset-chip"
+                  onClick={() => { setColType('standard'); setJsonTable('users'); setKeyPath('name'); setOperator('LIKE'); setCompareValue('John'); }}
+                >
+                  WHERE name LIKE %John%
+                </button>
+                <button
+                  type="button"
+                  className="preset-chip"
+                  onClick={() => { setColType('json'); setJsonTable('orders'); setJsonColumn('payload'); setKeyPath('pricing.total'); setOperator('='); setCompareValue('100'); }}
+                >
+                  JSON: payload.total = 100
+                </button>
+              </div>
+            </>
+          )}
 
           {subTab === 'json-migration' && (
             <>
@@ -1207,7 +1297,7 @@ function SqlQueryHelperTool() {
                   id="tableName"
                   type="text"
                   className="input"
-                  placeholder="e.g. users, orders, products"
+                  placeholder="e.g. orders, users, products"
                   value={tableName}
                   onChange={(e) => setTableName(e.target.value)}
                   spellCheck="false"
@@ -1236,29 +1326,45 @@ function SqlQueryHelperTool() {
                   type="button"
                   className="preset-chip"
                   onClick={() => {
-                    setTableName('users')
-                    setJsonInput(`{\n  "id": 1,\n  "name": "John Doe",\n  "email": "john@example.com",\n  "role_id": 2,\n  "is_active": true,\n  "balance": 1500.50,\n  "settings": { "theme": "dark", "notifications": true },\n  "created_at": "2026-08-06T12:00:00Z"\n}`)
+                    setTableName('orders')
+                    setJsonInput(`{\n  "id": 101,\n  "order_number": "ORD-2026-992",\n  "user_id": 42,\n  "status": "completed",\n  "total_amount": 299.99,\n  "payload": { "pricing": { "total": 100 } },\n  "created_at": "2026-08-06T10:15:00Z"\n}`)
                   }}
                 >
-                  User Payload
+                  Order Payload
                 </button>
                 <button
                   type="button"
                   className="preset-chip"
                   onClick={() => {
-                    setTableName('orders')
-                    setJsonInput(`{\n  "id": 101,\n  "order_number": "ORD-2026-992",\n  "user_id": 42,\n  "total_amount": 299.99,\n  "status": "paid",\n  "items": [{ "sku": "ABC", "qty": 2 }],\n  "paid_at": "2026-08-06T10:15:00Z"\n}`)
+                    setTableName('users')
+                    setJsonInput(`{\n  "id": 1,\n  "name": "John Doe",\n  "email": "john@example.com",\n  "role_id": 2,\n  "status": "active",\n  "created_at": "2026-08-06T12:00:00Z"\n}`)
                   }}
                 >
-                  Order Payload
+                  User Payload
                 </button>
               </div>
 
               <div className="section-divider" />
 
               <div className="field-group">
-                <label className="field-label">Options</label>
-                <div style={{ display: 'flex', gap: '16px', fontSize: '0.8rem' }}>
+                <label className="field-label">Migration Options & Indexing</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '0.8rem' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={options.addIndexes}
+                      onChange={(e) => setOptions(o => ({ ...o, addIndexes: e.target.checked }))}
+                    />
+                    Add -&gt;index() on FK & Key columns
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={options.compositeIndex}
+                      onChange={(e) => setOptions(o => ({ ...o, compositeIndex: e.target.checked }))}
+                    />
+                    Add Composite Index [FK, created_at]
+                  </label>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
                     <input
                       type="checkbox"
@@ -1275,105 +1381,7 @@ function SqlQueryHelperTool() {
                     />
                     $table-&gt;timestamps()
                   </label>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
-                    <input
-                      type="checkbox"
-                      checked={options.softDeletes}
-                      onChange={(e) => setOptions(o => ({ ...o, softDeletes: e.target.checked }))}
-                    />
-                    $table-&gt;softDeletes()
-                  </label>
                 </div>
-              </div>
-            </>
-          )}
-
-          {subTab === 'json-clause' && (
-            <>
-              <div className="options-grid">
-                <div>
-                  <label className="field-label">Database Table</label>
-                  <input
-                    type="text"
-                    className="input"
-                    value={jsonTable}
-                    onChange={(e) => setJsonTable(e.target.value)}
-                    placeholder="users"
-                  />
-                </div>
-                <div>
-                  <label className="field-label">JSON Column Name</label>
-                  <input
-                    type="text"
-                    className="input"
-                    value={jsonColumn}
-                    onChange={(e) => setJsonColumn(e.target.value)}
-                    placeholder="metadata"
-                  />
-                </div>
-              </div>
-
-              <div className="options-grid" style={{ marginTop: '12px' }}>
-                <div>
-                  <label className="field-label">JSON Key Path</label>
-                  <input
-                    type="text"
-                    className="input"
-                    value={keyPath}
-                    onChange={(e) => setKeyPath(e.target.value)}
-                    placeholder="address.city"
-                  />
-                </div>
-                <div>
-                  <label className="field-label">Operator</label>
-                  <select
-                    className="select-input"
-                    value={operator}
-                    onChange={(e) => setOperator(e.target.value)}
-                  >
-                    <option value="=">=</option>
-                    <option value="!=">!=</option>
-                    <option value=">">&gt;</option>
-                    <option value="<">&lt;</option>
-                    <option value="LIKE">LIKE</option>
-                  </select>
-                </div>
-              </div>
-
-              <div style={{ marginTop: '12px' }}>
-                <label className="field-label">Target Compare Value</label>
-                <input
-                  type="text"
-                  className="input"
-                  value={compareValue}
-                  onChange={(e) => setCompareValue(e.target.value)}
-                  placeholder="Jakarta"
-                />
-              </div>
-
-              <div className="preset-group">
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginRight: '4px' }}>Quick:</span>
-                <button
-                  type="button"
-                  className="preset-chip"
-                  onClick={() => { setJsonTable('users'); setJsonColumn('metadata'); setKeyPath('address.city'); setOperator('='); setCompareValue('Jakarta'); }}
-                >
-                  City Search
-                </button>
-                <button
-                  type="button"
-                  className="preset-chip"
-                  onClick={() => { setJsonTable('users'); setJsonColumn('settings'); setKeyPath('notifications.email'); setOperator('='); setCompareValue('true'); }}
-                >
-                  Boolean Filter
-                </button>
-                <button
-                  type="button"
-                  className="preset-chip"
-                  onClick={() => { setJsonTable('orders'); setJsonColumn('payload'); setKeyPath('pricing.total'); setOperator('>'); setCompareValue('100'); }}
-                >
-                  Numeric Query
-                </button>
               </div>
             </>
           )}
@@ -1389,7 +1397,7 @@ function SqlQueryHelperTool() {
                   id="rawSql"
                   className="textarea"
                   style={{ minHeight: '180px', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.8rem' }}
-                  placeholder="SELECT * FROM users WHERE..."
+                  placeholder="SELECT * FROM orders WHERE..."
                   value={rawSql}
                   onChange={(e) => setRawSql(e.target.value)}
                   spellCheck="false"
@@ -1400,7 +1408,6 @@ function SqlQueryHelperTool() {
         </div>
       </section>
 
-      {/* ── Right Panel Output ── */}
       <section className="panel">
         <div className="panel-header">
           <span className="panel-title">
@@ -1411,6 +1418,45 @@ function SqlQueryHelperTool() {
         </div>
 
         <div className="panel-body">
+          {subTab === 'json-clause' && (
+            <div>
+              <div className="hash-output-card">
+                <div className="hash-card-header">
+                  <span className="hash-card-title"><CodeIcon />Laravel Eloquent (Recommended)</span>
+                  <span className="algo-badge bcrypt">Laravel</span>
+                </div>
+                <div className="hash-code-display">{jsonQueries.elo}</div>
+              </div>
+
+              <div className="hash-output-card">
+                <div className="hash-card-header">
+                  <span className="hash-card-title"><DatabaseIcon />Raw SQL (MySQL / MariaDB)</span>
+                  <span className="algo-badge bcrypt">MySQL</span>
+                </div>
+                <div className="hash-code-display">{jsonQueries.mysql57}</div>
+              </div>
+
+              <div className="hash-output-card">
+                <div className="hash-card-header">
+                  <span className="hash-card-title"><DatabaseIcon />PostgreSQL JSONB</span>
+                  <span className="algo-badge argon">PostgreSQL</span>
+                </div>
+                <div className="hash-code-display argon">{jsonQueries.pgSql}</div>
+              </div>
+
+              <div className="copy-btn-wrapper">
+                <button
+                  type="button"
+                  className={`btn btn-copy ${copiedQuery ? 'copied' : ''}`}
+                  onClick={() => copyToClipboard(`${jsonQueries.elo}\n\n${jsonQueries.mysql57}`, setCopiedQuery)}
+                >
+                  {copiedQuery ? <CheckIcon /> : <CopyIcon />}
+                  {copiedQuery ? 'Copied Queries!' : 'Copy Queries'}
+                </button>
+              </div>
+            </div>
+          )}
+
           {subTab === 'json-migration' && (
             <>
               {migrationError ? (
@@ -1471,53 +1517,6 @@ function SqlQueryHelperTool() {
                 </>
               )}
             </>
-          )}
-
-          {subTab === 'json-clause' && (
-            <div>
-              <div className="hash-output-card">
-                <div className="hash-card-header">
-                  <span className="hash-card-title"><CodeIcon />Laravel Eloquent (Recommended)</span>
-                  <span className="algo-badge bcrypt">Laravel</span>
-                </div>
-                <div className="hash-code-display">{jsonQueries.elo}</div>
-              </div>
-
-              <div className="hash-output-card">
-                <div className="hash-card-header">
-                  <span className="hash-card-title"><DatabaseIcon />MySQL 8.0+ Inline Arrow (`-&gt;&gt;`)</span>
-                  <span className="algo-badge argon">MySQL 8.0</span>
-                </div>
-                <div className="hash-code-display argon">{jsonQueries.mysql80}</div>
-              </div>
-
-              <div className="hash-output-card">
-                <div className="hash-card-header">
-                  <span className="hash-card-title"><DatabaseIcon />MySQL 5.7+ JSON_EXTRACT</span>
-                  <span className="algo-badge bcrypt">MySQL 5.7</span>
-                </div>
-                <div className="hash-code-display">{jsonQueries.mysql57}</div>
-              </div>
-
-              <div className="hash-output-card">
-                <div className="hash-card-header">
-                  <span className="hash-card-title"><DatabaseIcon />PostgreSQL JSONB (`-&gt;&gt;`)</span>
-                  <span className="algo-badge argon">PostgreSQL</span>
-                </div>
-                <div className="hash-code-display argon">{jsonQueries.pgSql}</div>
-              </div>
-
-              <div className="copy-btn-wrapper">
-                <button
-                  type="button"
-                  className={`btn btn-copy ${copiedQuery ? 'copied' : ''}`}
-                  onClick={() => copyToClipboard(`${jsonQueries.elo}\n\n${jsonQueries.mysql80}`, setCopiedQuery)}
-                >
-                  {copiedQuery ? <CheckIcon /> : <CopyIcon />}
-                  {copiedQuery ? 'Copied Queries!' : 'Copy Queries'}
-                </button>
-              </div>
-            </div>
           )}
 
           {subTab === 'sql-format' && (

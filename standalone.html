@@ -823,22 +823,276 @@
       </svg>
     );
 
+    function convertJsonToMigrationAndModel(tableName, jsonStr, options = { nullable: true, timestamps: true, softDeletes: false, addIndexes: true, compositeIndex: false }) {
+      if (!jsonStr || !jsonStr.trim()) {
+        return { error: 'Please enter a valid JSON payload.' };
+      }
+
+      let data;
+      try {
+        data = JSON.parse(jsonStr);
+      } catch (err) {
+        return { error: `Invalid JSON syntax: ${err.message}` };
+      }
+
+      if (Array.isArray(data)) {
+        data = data[0] || {};
+      }
+
+      if (typeof data !== 'object' || data === null) {
+        return { error: 'JSON payload must be an Object or Array of Objects.' };
+      }
+
+      const columns = [];
+      const fillable = [];
+      const casts = {};
+      const foreignKeys = [];
+      let statusOrTypeKey = null;
+
+      const rawName = (tableName || 'users').trim().toLowerCase().replace(/[^a-z0-9_]/g, '_');
+      const className = rawName
+        .replace(/(?:^|_)([a-z])/g, (_, p1) => p1.toUpperCase())
+        .replace(/s$/, '');
+
+      Object.entries(data).forEach(([key, val]) => {
+        fillable.push(`'${key}'`);
+
+        if (key === 'id') {
+          columns.push(`            $table->id();`);
+          return;
+        }
+
+        if (key.endsWith('_id')) {
+          foreignKeys.push(key);
+          const refTable = key.replace(/_id$/, 's');
+          const idxSuffix = options.addIndexes ? '->index()' : '';
+          columns.push(`            $table->foreignId('${key}')->constrained('${refTable}')->cascadeOnDelete()${idxSuffix};`);
+          casts[key] = 'integer';
+          return;
+        }
+
+        const valType = typeof val;
+        const shouldIndex = options.addIndexes && ['email', 'status', 'type', 'slug', 'code', 'sku', 'uuid'].includes(key.toLowerCase());
+
+        if (shouldIndex && !statusOrTypeKey) {
+          statusOrTypeKey = key;
+        }
+
+        const idxChain = shouldIndex ? '->index()' : '';
+
+        if (val === null) {
+          columns.push(`            $table->string('${key}')->nullable()${idxChain};`);
+        } else if (valType === 'boolean') {
+          columns.push(`            $table->boolean('${key}')${options.nullable ? '->default(false)' : ''}${idxChain};`);
+          casts[key] = 'boolean';
+        } else if (valType === 'number') {
+          if (Number.isInteger(val)) {
+            columns.push(`            $table->integer('${key}')${options.nullable ? '->nullable()' : ''}${idxChain};`);
+            casts[key] = 'integer';
+          } else {
+            columns.push(`            $table->decimal('${key}', 10, 2)${options.nullable ? '->nullable()' : ''}${idxChain};`);
+            casts[key] = 'float';
+          }
+        } else if (valType === 'object') {
+          columns.push(`            $table->json('${key}')${options.nullable ? '->nullable()' : ''};`);
+          casts[key] = 'array';
+        } else if (valType === 'string') {
+          if (key.endsWith('_at') || key.endsWith('_date') || /^\d{4}-\d{2}-\d{2}/.test(val)) {
+            columns.push(`            $table->timestamp('${key}')${options.nullable ? '->nullable()' : ''}${idxChain};`);
+            casts[key] = 'datetime';
+          } else if (val.length > 255) {
+            columns.push(`            $table->text('${key}')${options.nullable ? '->nullable()' : ''};`);
+          } else {
+            columns.push(`            $table->string('${key}')${options.nullable ? '->nullable()' : ''}${idxChain};`);
+          }
+        }
+      });
+
+      if (options.softDeletes) {
+        columns.push(`            $table->softDeletes();`);
+      }
+      if (options.timestamps) {
+        columns.push(`            $table->timestamps();`);
+      }
+
+      if (options.compositeIndex) {
+        const compCol1 = foreignKeys[0] || statusOrTypeKey || 'id';
+        const compCol2 = options.timestamps ? 'created_at' : 'id';
+        if (compCol1 !== compCol2) {
+          columns.push(`\n            // Composite Index for speed optimization\n            $table->index(['${compCol1}', '${compCol2}']);`);
+        }
+      }
+
+      const migrationCode = `<?php
+
+use Illuminate\\Database\\Migrations\\Migration;
+use Illuminate\\Database\\Schema\\Blueprint;
+use Illuminate\\Support\\Facades\\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('${rawName}', function (Blueprint $table) {
+${columns.join('\n')}
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('${rawName}');
+    }
+};`;
+
+      const castsFormatted = Object.entries(casts)
+        .map(([k, v]) => `        '${k}' => '${v}',`)
+        .join('\n');
+
+      const modelCode = `<?php
+
+namespace App\\Models;
+
+use Illuminate\\Database\\Eloquent\\Factories\\HasFactory;
+use Illuminate\\Database\\Eloquent\\Model;
+${options.softDeletes ? 'use Illuminate\\Database\\Eloquent\\SoftDeletes;\n' : ''}
+class ${className || 'SampleModel'} extends Model
+{
+    use HasFactory${options.softDeletes ? ', SoftDeletes' : ''};
+
+    protected $table = '${rawName}';
+
+    protected $fillable = [
+        ${fillable.join(',\n        ')},
+    ];
+
+    protected $casts = [
+${castsFormatted}
+    ];
+}`;
+
+      return { migrationCode, modelCode };
+    }
+
+    function generateSqlQueries(table, colType, jsonCol, keyPath, operator, val) {
+      const tbl = (table || 'users').trim();
+      const isJson = colType === 'json';
+      const col = (jsonCol || 'metadata').trim();
+      const path = (keyPath || (isJson ? 'pricing.total' : 'company_id')).trim();
+      const op = (operator || '=').trim();
+      const v = (val || '1').trim();
+
+      const isNumeric = !isNaN(v) && v !== '' && !v.includes(',');
+      const modelName = tbl.replace(/(?:^|_)([a-z])/g, (_, p1) => p1.toUpperCase()).replace(/s$/, '');
+
+      let mysql57 = '';
+      let pgSql = '';
+      let elo = '';
+
+      if (!isJson) {
+        if (op === 'IN') {
+          const items = v.split(',').map(s => s.trim());
+          const formattedItemsSql = items.map(i => (!isNaN(i) && i !== '' ? i : `'${i}'`)).join(', ');
+          const formattedItemsElo = items.map(i => (!isNaN(i) && i !== '' ? (Number(i) || `'${i}'`) : `'${i}'`)).join(', ');
+
+          mysql57 = `SELECT * FROM ${tbl}\nWHERE ${path} IN (${formattedItemsSql});`;
+          pgSql = `SELECT * FROM ${tbl}\nWHERE ${path} IN (${formattedItemsSql});`;
+          elo = `${modelName || 'User'}::whereIn('${path}', [${formattedItemsElo}])->get();`;
+        } else if (op === 'LIKE') {
+          const likeVal = `%${v}%`;
+          mysql57 = `SELECT * FROM ${tbl}\nWHERE ${path} LIKE '${likeVal}';`;
+          pgSql = `SELECT * FROM ${tbl}\nWHERE ${path} LIKE '${likeVal}';`;
+          elo = `${modelName || 'User'}::where('${path}', 'LIKE', '${likeVal}')->get();`;
+        } else if (op === 'OR') {
+          const formattedVal = isNumeric ? v : `'${v}'`;
+          mysql57 = `SELECT * FROM ${tbl}\nWHERE status = 'active' OR ${path} = ${formattedVal};`;
+          pgSql = `SELECT * FROM ${tbl}\nWHERE status = 'active' OR ${path} = ${formattedVal};`;
+          elo = `${modelName || 'User'}::orWhere('${path}', ${isNumeric ? v : `'${v}'`})->get();`;
+        } else {
+          const formattedVal = isNumeric ? v : `'${v}'`;
+          mysql57 = `SELECT * FROM ${tbl}\nWHERE ${path} ${op} ${formattedVal};`;
+          pgSql = `SELECT * FROM ${tbl}\nWHERE ${path} ${op} ${formattedVal};`;
+          elo = `${modelName || 'User'}::where('${path}', ${isNumeric ? v : `'${v}'`})->get();`;
+        }
+      } else {
+        const arrowPath = path.split('.').join('->');
+        const jsonPathDollar = `$.${path}`;
+
+        if (op === 'IN') {
+          const items = v.split(',').map(s => s.trim());
+          const formattedItemsSql = items.map(i => (!isNaN(i) && i !== '' ? i : `'${i}'`)).join(', ');
+          const formattedItemsElo = items.map(i => (!isNaN(i) && i !== '' ? (Number(i) || `'${i}'`) : `'${i}'`)).join(', ');
+
+          mysql57 = `SELECT * FROM ${tbl}\nWHERE JSON_UNQUOTE(JSON_EXTRACT(${col}, '${jsonPathDollar}')) IN (${formattedItemsSql});`;
+          pgSql = `SELECT * FROM ${tbl}\nWHERE ${col}->${path.split('.').map(p => `'${p}'`).join('->')} IN (${formattedItemsSql});`;
+          elo = `${modelName || 'User'}::whereIn('${col}->${arrowPath}', [${formattedItemsElo}])->get();`;
+        } else if (op === 'LIKE') {
+          const likeVal = `%${v}%`;
+          mysql57 = `SELECT * FROM ${tbl}\nWHERE JSON_UNQUOTE(JSON_EXTRACT(${col}, '${jsonPathDollar}')) LIKE '${likeVal}';`;
+          pgSql = `SELECT * FROM ${tbl}\nWHERE ${col}->${path.split('.').map(p => `'${p}'`).join('->')} LIKE '${likeVal}';`;
+          elo = `${modelName || 'User'}::where('${col}->${arrowPath}', 'LIKE', '${likeVal}')->get();`;
+        } else if (op === 'OR') {
+          const formattedVal = isNumeric ? v : `'${v}'`;
+          mysql57 = `SELECT * FROM ${tbl}\nWHERE status = 'active' OR JSON_UNQUOTE(JSON_EXTRACT(${col}, '${jsonPathDollar}')) = ${formattedVal};`;
+          pgSql = `SELECT * FROM ${tbl}\nWHERE status = 'active' OR ${col}->${path.split('.').map(p => `'${p}'`).join('->')} = ${formattedVal};`;
+          elo = `${modelName || 'User'}::orWhere('${col}->${arrowPath}', ${isNumeric ? v : `'${v}'`})->get();`;
+        } else if (op === 'CONTAINS') {
+          const jsonVal = isNumeric ? v : `"${v}"`;
+          mysql57 = `SELECT * FROM ${tbl}\nWHERE JSON_CONTAINS(${col}, '${jsonVal}', '${jsonPathDollar}');`;
+          pgSql = `SELECT * FROM ${tbl}\nWHERE ${col} @> '{"${path.split('.').join('": {"')}": ${jsonVal}${'}'.repeat(path.split('.').length)}';`;
+          elo = `${modelName || 'User'}::whereJsonContains('${col}->${arrowPath}', ${isNumeric ? v : `'${v}'`})->get();`;
+        } else {
+          const formattedVal = isNumeric ? v : `'${v}'`;
+          mysql57 = `SELECT * FROM ${tbl}\nWHERE JSON_UNQUOTE(JSON_EXTRACT(${col}, '${jsonPathDollar}')) ${op} ${formattedVal};`;
+          pgSql = `SELECT * FROM ${tbl}\nWHERE ${col}->${path.split('.').map(p => `'${p}'`).join('->')} ${op} ${formattedVal};`;
+          elo = `${modelName || 'User'}::where('${col}->${arrowPath}', ${isNumeric ? v : `'${v}'`})->get();`;
+        }
+      }
+
+      return { mysql57, pgSql, elo };
+    }
+
+    function formatRawSql(sqlStr) {
+      if (!sqlStr || !sqlStr.trim()) return '';
+      let sql = sqlStr.trim().replace(/\s+/g, ' ');
+
+      const keywords = [
+        'SELECT', 'FROM', 'WHERE', 'AND', 'OR', 'ORDER BY', 'GROUP BY',
+        'HAVING', 'LIMIT', 'OFFSET', 'JOIN', 'LEFT JOIN', 'RIGHT JOIN',
+        'INNER JOIN', 'ON', 'INSERT INTO', 'VALUES', 'UPDATE', 'SET', 'DELETE FROM'
+      ];
+
+      keywords.forEach(kw => {
+        const regex = new RegExp(`\\b${kw}\\b`, 'gi');
+        sql = sql.replace(regex, `\n${kw.toUpperCase()}`);
+      });
+
+      return sql.trim();
+    }
+
     function SqlQueryHelperTool() {
-      const [subTab, setSubTab] = useState('json-migration');
-      const [tableName, setTableName] = useState('users');
-      const [jsonInput, setJsonInput] = useState(`{\n  "id": 1,\n  "name": "John Doe",\n  "email": "john@example.com",\n  "role_id": 2,\n  "is_active": true,\n  "balance": 1500.50,\n  "settings": { "theme": "dark", "notifications": true },\n  "created_at": "2026-08-06T12:00:00Z"\n}`);
-      const [options, setOptions] = useState({ nullable: true, timestamps: true, softDeletes: false });
+      const [subTab, setSubTab] = useState('json-clause');
+
+      const [tableName, setTableName] = useState('orders');
+      const [jsonInput, setJsonInput] = useState(`{\n  "id": 101,\n  "order_number": "ORD-2026-992",\n  "user_id": 42,\n  "status": "completed",\n  "total_amount": 299.99,\n  "payload": {\n    "pricing": { "total": 100 },\n    "items": ["SKU-100", "SKU-200"]\n  },\n  "created_at": "2026-08-06T10:15:00Z"\n}`);
+      const [options, setOptions] = useState({ nullable: true, timestamps: true, softDeletes: false, addIndexes: true, compositeIndex: true });
       const [copiedMigration, setCopiedMigration] = useState(false);
       const [copiedModel, setCopiedModel] = useState(false);
 
+      const [colType, setColType] = useState('standard');
       const [jsonTable, setJsonTable] = useState('users');
       const [jsonColumn, setJsonColumn] = useState('metadata');
-      const [keyPath, setKeyPath] = useState('address.city');
+      const [keyPath, setKeyPath] = useState('company_id');
       const [operator, setOperator] = useState('=');
-      const [compareValue, setCompareValue] = useState('Jakarta');
+      const [compareValue, setCompareValue] = useState('1');
       const [copiedQuery, setCopiedQuery] = useState(false);
 
-      const [rawSql, setRawSql] = useState('SELECT u.id, u.name, o.total FROM users u LEFT JOIN orders o ON u.id = o.user_id WHERE u.is_active = 1 AND o.status = "completed" ORDER BY o.total DESC LIMIT 10;');
+      const [rawSql, setRawSql] = useState('SELECT u.id, u.name, u.company_id FROM users u WHERE u.company_id = 1 AND u.status = "active" ORDER BY u.id DESC LIMIT 10;');
       const [copiedFormattedSql, setCopiedFormattedSql] = useState(false);
 
       const copyToClipboard = async (text, setter) => {
@@ -859,7 +1113,7 @@
       };
 
       const { migrationCode, modelCode, error: migrationError } = convertJsonToMigrationAndModel(tableName, jsonInput, options);
-      const jsonQueries = generateJsonSqlQueries(jsonTable, jsonColumn, keyPath, operator, compareValue);
+      const jsonQueries = generateSqlQueries(jsonTable, colType, jsonColumn, keyPath, operator, compareValue);
       const formattedSql = formatRawSql(rawSql);
 
       return (
@@ -871,22 +1125,101 @@
             </div>
             <div className="panel-body">
               <div className="tab-group">
+                <button type="button" className={`tab-btn ${subTab === 'json-clause' ? 'active' : ''}`} onClick={() => setSubTab('json-clause')}>
+                  <CodeIcon />SQL Query Builder
+                </button>
                 <button type="button" className={`tab-btn ${subTab === 'json-migration' ? 'active' : ''}`} onClick={() => setSubTab('json-migration')}>
                   <TableIcon />JSON to Migration
-                </button>
-                <button type="button" className={`tab-btn ${subTab === 'json-clause' ? 'active' : ''}`} onClick={() => setSubTab('json-clause')}>
-                  <CodeIcon />JSON SQL Clause
                 </button>
                 <button type="button" className={`tab-btn ${subTab === 'sql-format' ? 'active' : ''}`} onClick={() => setSubTab('sql-format')}>
                   <SparklesIcon />SQL Formatter
                 </button>
               </div>
 
+              {subTab === 'json-clause' && (
+                <>
+                  <div className="field-group">
+                    <label className="field-label">Target Column Type</label>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        type="button"
+                        className={`btn ${colType === 'standard' ? 'btn-primary' : 'btn-reset'}`}
+                        style={{ flex: 1, padding: '8px 12px', fontSize: '0.8rem' }}
+                        onClick={() => { setColType('standard'); setKeyPath('company_id'); setCompareValue('1'); }}
+                      >
+                        Standard Column (e.g. company_id)
+                      </button>
+                      <button
+                        type="button"
+                        className={`btn ${colType === 'json' ? 'btn-primary' : 'btn-reset'}`}
+                        style={{ flex: 1, padding: '8px 12px', fontSize: '0.8rem' }}
+                        onClick={() => { setColType('json'); setJsonColumn('payload'); setKeyPath('pricing.total'); setCompareValue('100'); }}
+                      >
+                        JSON Column (e.g. payload.key)
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="options-grid" style={{ marginTop: '12px' }}>
+                    <div>
+                      <label className="field-label">Database Table</label>
+                      <input type="text" className="input" value={jsonTable} onChange={(e) => setJsonTable(e.target.value)} placeholder="users" />
+                    </div>
+                    {colType === 'json' ? (
+                      <div>
+                        <label className="field-label">JSON Column Name</label>
+                        <input type="text" className="input" value={jsonColumn} onChange={(e) => setJsonColumn(e.target.value)} placeholder="payload" />
+                      </div>
+                    ) : (
+                      <div>
+                        <label className="field-label">Column Name</label>
+                        <input type="text" className="input" value={keyPath} onChange={(e) => setKeyPath(e.target.value)} placeholder="company_id" />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="options-grid" style={{ marginTop: '12px' }}>
+                    {colType === 'json' && (
+                      <div>
+                        <label className="field-label">JSON Key Path</label>
+                        <input type="text" className="input" value={keyPath} onChange={(e) => setKeyPath(e.target.value)} placeholder="pricing.total" />
+                      </div>
+                    )}
+                    <div style={colType !== 'json' ? { gridColumn: 'span 2' } : {}}>
+                      <label className="field-label">Query Operator / Clause</label>
+                      <select className="select-input" value={operator} onChange={(e) => setOperator(e.target.value)}>
+                        <option value="=">= (WHERE {keyPath || 'company_id'} = {compareValue || '1'})</option>
+                        <option value="IN">WHERE IN (1, 2, 3)</option>
+                        <option value="LIKE">LIKE (WHERE {keyPath || 'name'} LIKE %val%)</option>
+                        <option value="OR">OR WHERE (orWhere)</option>
+                        {colType === 'json' && <option value="CONTAINS">whereJsonContains</option>}
+                        <option value="!=">!= (Not Equal)</option>
+                        <option value=">">&gt; (Greater Than)</option>
+                        <option value="<">&lt; (Less Than)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div style={{ marginTop: '12px' }}>
+                    <label className="field-label">Compare Value (comma-separated list for IN)</label>
+                    <input type="text" className="input" value={compareValue} onChange={(e) => setCompareValue(e.target.value)} placeholder="1" />
+                  </div>
+
+                  <div className="preset-group">
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginRight: '4px' }}>Presets:</span>
+                    <button type="button" className="preset-chip" onClick={() => { setColType('standard'); setJsonTable('users'); setKeyPath('company_id'); setOperator('='); setCompareValue('1'); }}>WHERE company_id = 1</button>
+                    <button type="button" className="preset-chip" onClick={() => { setColType('standard'); setJsonTable('users'); setKeyPath('company_id'); setOperator('IN'); setCompareValue('1, 2, 3'); }}>WHERE company_id IN (1, 2, 3)</button>
+                    <button type="button" className="preset-chip" onClick={() => { setColType('standard'); setJsonTable('users'); setKeyPath('name'); setOperator('LIKE'); setCompareValue('John'); }}>WHERE name LIKE %John%</button>
+                    <button type="button" className="preset-chip" onClick={() => { setColType('json'); setJsonTable('orders'); setJsonColumn('payload'); setKeyPath('pricing.total'); setOperator('='); setCompareValue('100'); }}>JSON: payload.total = 100</button>
+                  </div>
+                </>
+              )}
+
               {subTab === 'json-migration' && (
                 <>
                   <div className="field-group">
                     <label className="field-label" htmlFor="tableName"><span className="field-label-icon"><TableIcon /></span>Table Name</label>
-                    <input id="tableName" type="text" className="input" placeholder="users" value={tableName} onChange={(e) => setTableName(e.target.value)} />
+                    <input id="tableName" type="text" className="input" placeholder="orders" value={tableName} onChange={(e) => setTableName(e.target.value)} />
                   </div>
                   <div className="field-group">
                     <label className="field-label" htmlFor="jsonInput"><span className="field-label-icon"><CodeIcon /></span>JSON Payload Sample</label>
@@ -894,13 +1227,21 @@
                   </div>
                   <div className="preset-group">
                     <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginRight: '4px' }}>Samples:</span>
-                    <button type="button" className="preset-chip" onClick={() => { setTableName('users'); setJsonInput(`{\n  "id": 1,\n  "name": "John Doe",\n  "email": "john@example.com",\n  "role_id": 2,\n  "is_active": true,\n  "balance": 1500.50,\n  "settings": { "theme": "dark", "notifications": true },\n  "created_at": "2026-08-06T12:00:00Z"\n}`); }}>User Payload</button>
-                    <button type="button" className="preset-chip" onClick={() => { setTableName('orders'); setJsonInput(`{\n  "id": 101,\n  "order_number": "ORD-2026-992",\n  "user_id": 42,\n  "total_amount": 299.99,\n  "status": "paid",\n  "items": [{ "sku": "ABC", "qty": 2 }],\n  "paid_at": "2026-08-06T10:15:00Z"\n}`); }}>Order Payload</button>
+                    <button type="button" className="preset-chip" onClick={() => { setTableName('orders'); setJsonInput(`{\n  "id": 101,\n  "order_number": "ORD-2026-992",\n  "user_id": 42,\n  "status": "completed",\n  "total_amount": 299.99,\n  "payload": { "pricing": { "total": 100 } },\n  "created_at": "2026-08-06T10:15:00Z"\n}`); }}>Order Payload</button>
+                    <button type="button" className="preset-chip" onClick={() => { setTableName('users'); setJsonInput(`{\n  "id": 1,\n  "name": "John Doe",\n  "email": "john@example.com",\n  "role_id": 2,\n  "status": "active",\n  "created_at": "2026-08-06T12:00:00Z"\n}`); }}>User Payload</button>
                   </div>
                   <div className="section-divider" />
                   <div className="field-group">
-                    <label className="field-label">Options</label>
-                    <div style={{ display: 'flex', gap: '16px', fontSize: '0.8rem' }}>
+                    <label className="field-label">Migration Options & Indexing</label>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '0.8rem' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                        <input type="checkbox" checked={options.addIndexes} onChange={(e) => setOptions(o => ({ ...o, addIndexes: e.target.checked }))} />
+                        Add -&gt;index() on FK & Key columns
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                        <input type="checkbox" checked={options.compositeIndex} onChange={(e) => setOptions(o => ({ ...o, compositeIndex: e.target.checked }))} />
+                        Add Composite Index [FK, created_at]
+                      </label>
                       <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
                         <input type="checkbox" checked={options.nullable} onChange={(e) => setOptions(o => ({ ...o, nullable: e.target.checked }))} />
                         Nullable by default
@@ -909,52 +1250,7 @@
                         <input type="checkbox" checked={options.timestamps} onChange={(e) => setOptions(o => ({ ...o, timestamps: e.target.checked }))} />
                         $table-&gt;timestamps()
                       </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
-                        <input type="checkbox" checked={options.softDeletes} onChange={(e) => setOptions(o => ({ ...o, softDeletes: e.target.checked }))} />
-                        $table-&gt;softDeletes()
-                      </label>
                     </div>
-                  </div>
-                </>
-              )}
-
-              {subTab === 'json-clause' && (
-                <>
-                  <div className="options-grid">
-                    <div>
-                      <label className="field-label">Database Table</label>
-                      <input type="text" className="input" value={jsonTable} onChange={(e) => setJsonTable(e.target.value)} />
-                    </div>
-                    <div>
-                      <label className="field-label">JSON Column Name</label>
-                      <input type="text" className="input" value={jsonColumn} onChange={(e) => setJsonColumn(e.target.value)} />
-                    </div>
-                  </div>
-                  <div className="options-grid" style={{ marginTop: '12px' }}>
-                    <div>
-                      <label className="field-label">JSON Key Path</label>
-                      <input type="text" className="input" value={keyPath} onChange={(e) => setKeyPath(e.target.value)} />
-                    </div>
-                    <div>
-                      <label className="field-label">Operator</label>
-                      <select className="select-input" value={operator} onChange={(e) => setOperator(e.target.value)}>
-                        <option value="=">=</option>
-                        <option value="!=">!=</option>
-                        <option value=">">&gt;</option>
-                        <option value="<">&lt;</option>
-                        <option value="LIKE">LIKE</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div style={{ marginTop: '12px' }}>
-                    <label className="field-label">Target Compare Value</label>
-                    <input type="text" className="input" value={compareValue} onChange={(e) => setCompareValue(e.target.value)} />
-                  </div>
-                  <div className="preset-group">
-                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginRight: '4px' }}>Quick:</span>
-                    <button type="button" className="preset-chip" onClick={() => { setJsonTable('users'); setJsonColumn('metadata'); setKeyPath('address.city'); setOperator('='); setCompareValue('Jakarta'); }}>City Search</button>
-                    <button type="button" className="preset-chip" onClick={() => { setJsonTable('users'); setJsonColumn('settings'); setKeyPath('notifications.email'); setOperator('='); setCompareValue('true'); }}>Boolean Filter</button>
-                    <button type="button" className="preset-chip" onClick={() => { setJsonTable('orders'); setJsonColumn('payload'); setKeyPath('pricing.total'); setOperator('>'); setCompareValue('100'); }}>Numeric Query</button>
                   </div>
                 </>
               )}
@@ -976,6 +1272,28 @@
               <span className="panel-badge">Real-time</span>
             </div>
             <div className="panel-body">
+              {subTab === 'json-clause' && (
+                <div>
+                  <div className="hash-output-card">
+                    <div className="hash-card-header"><span className="hash-card-title"><CodeIcon />Laravel Eloquent (Recommended)</span><span className="algo-badge bcrypt">Laravel</span></div>
+                    <div className="hash-code-display">{jsonQueries.elo}</div>
+                  </div>
+                  <div className="hash-output-card">
+                    <div className="hash-card-header"><span className="hash-card-title"><DatabaseIcon />Raw SQL (MySQL / MariaDB)</span><span className="algo-badge bcrypt">MySQL</span></div>
+                    <div className="hash-code-display">{jsonQueries.mysql57}</div>
+                  </div>
+                  <div className="hash-output-card">
+                    <div className="hash-card-header"><span className="hash-card-title"><DatabaseIcon />PostgreSQL JSONB</span><span className="algo-badge argon">PostgreSQL</span></div>
+                    <div className="hash-code-display argon">{jsonQueries.pgSql}</div>
+                  </div>
+                  <div className="copy-btn-wrapper">
+                    <button type="button" className={`btn btn-copy ${copiedQuery ? 'copied' : ''}`} onClick={() => copyToClipboard(`${jsonQueries.elo}\n\n${jsonQueries.mysql57}`, setCopiedQuery)}>
+                      {copiedQuery ? <CheckIcon /> : <CopyIcon />} {copiedQuery ? 'Copied Queries!' : 'Copy Queries'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {subTab === 'json-migration' && (
                 <>
                   {migrationError ? (
@@ -1004,32 +1322,6 @@
                     </>
                   )}
                 </>
-              )}
-
-              {subTab === 'json-clause' && (
-                <div>
-                  <div className="hash-output-card">
-                    <div className="hash-card-header"><span className="hash-card-title"><CodeIcon />Laravel Eloquent (Recommended)</span><span className="algo-badge bcrypt">Laravel</span></div>
-                    <div className="hash-code-display">{jsonQueries.elo}</div>
-                  </div>
-                  <div className="hash-output-card">
-                    <div className="hash-card-header"><span className="hash-card-title"><DatabaseIcon />MySQL 8.0+ Inline Arrow (`-&gt;&gt;`)</span><span className="algo-badge argon">MySQL 8.0</span></div>
-                    <div className="hash-code-display argon">{jsonQueries.mysql80}</div>
-                  </div>
-                  <div className="hash-output-card">
-                    <div className="hash-card-header"><span className="hash-card-title"><DatabaseIcon />MySQL 5.7+ JSON_EXTRACT</span><span className="algo-badge bcrypt">MySQL 5.7</span></div>
-                    <div className="hash-code-display">{jsonQueries.mysql57}</div>
-                  </div>
-                  <div className="hash-output-card">
-                    <div className="hash-card-header"><span className="hash-card-title"><DatabaseIcon />PostgreSQL JSONB (`-&gt;&gt;`)</span><span className="algo-badge argon">PostgreSQL</span></div>
-                    <div className="hash-code-display argon">{jsonQueries.pgSql}</div>
-                  </div>
-                  <div className="copy-btn-wrapper">
-                    <button type="button" className={`btn btn-copy ${copiedQuery ? 'copied' : ''}`} onClick={() => copyToClipboard(`${jsonQueries.elo}\n\n${jsonQueries.mysql80}`, setCopiedQuery)}>
-                      {copiedQuery ? <CheckIcon /> : <CopyIcon />} {copiedQuery ? 'Copied Queries!' : 'Copy Queries'}
-                    </button>
-                  </div>
-                </div>
               )}
 
               {subTab === 'sql-format' && (
