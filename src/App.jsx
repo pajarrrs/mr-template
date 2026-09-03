@@ -1,4 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
+import bcrypt from 'bcryptjs'
+import { argon2id, argon2Verify } from 'hash-wasm'
 
 // ─── Inline SVG Icons ──────────────────────────────────────────────────────
 
@@ -177,48 +179,52 @@ function toBase64NoPadding(byteArray) {
 }
 
 async function generateBcryptHash(plainText, cost = 10) {
-  const costPadded = String(cost).padStart(2, '0')
-  const saltBytes = window.crypto.getRandomValues(new Uint8Array(16))
-  const saltB64 = toBcryptBase64(saltBytes).substring(0, 22)
-
-  const encoder = new TextEncoder()
-  let buffer = encoder.encode(`${plainText}:${saltB64}:${costPadded}`)
-  
-  const iterations = Math.pow(2, Math.min(cost, 10))
-  for (let i = 0; i < iterations; i++) {
-    const hashBuf = await window.crypto.subtle.digest('SHA-256', buffer)
-    const temp = new Uint8Array(hashBuf.byteLength + 1)
-    temp.set(new Uint8Array(hashBuf), 0)
-    temp[hashBuf.byteLength] = i % 256
-    buffer = temp
+  try {
+    const salt = bcrypt.genSaltSync(cost)
+    const hash = bcrypt.hashSync(plainText, salt)
+    // Laravel standard uses $2y$ prefix (PHP standard), bcryptjs generates $2a$ or $2b$
+    return hash.replace(/^\$2[ab]\$/, '$2y$')
+  } catch (err) {
+    console.error('Bcrypt generation error:', err)
+    return ''
   }
-  
-  const finalDigest = await window.crypto.subtle.digest('SHA-256', buffer)
-  const cipherBytes = new Uint8Array(finalDigest).slice(0, 23)
-  const cipherB64 = toBcryptBase64(cipherBytes).substring(0, 31)
-
-  return `$2y$${costPadded}$${saltB64}${cipherB64}`
 }
 
 async function generateArgon2idHash(plainText, memory = 1024, time = 3, parallelism = 3) {
-  const saltBytes = window.crypto.getRandomValues(new Uint8Array(16))
-  const saltB64 = toBase64NoPadding(saltBytes)
-
-  const encoder = new TextEncoder()
-  let buffer = encoder.encode(`argon2id:${plainText}:${saltB64}:${memory}:${time}:${parallelism}`)
-
-  for (let i = 0; i < time * 32; i++) {
-    const hashBuf = await window.crypto.subtle.digest('SHA-256', buffer)
-    const temp = new Uint8Array(hashBuf.byteLength + 1)
-    temp.set(new Uint8Array(hashBuf), 0)
-    temp[hashBuf.byteLength] = i % 256
-    buffer = temp
+  try {
+    const salt = window.crypto.getRandomValues(new Uint8Array(16))
+    return await argon2id({
+      password: plainText,
+      salt,
+      iterations: time,
+      memorySize: memory,
+      hashLength: 32,
+      parallelism,
+      outputType: 'encoded'
+    })
+  } catch (err) {
+    console.error('Argon2id generation error:', err)
+    return ''
   }
+}
 
-  const finalDigest = await window.crypto.subtle.digest('SHA-256', buffer)
-  const cipherB64 = toBase64NoPadding(new Uint8Array(finalDigest))
-
-  return `$argon2id$v=19$m=${memory},t=${time},p=${parallelism}$${saltB64}$${cipherB64}`
+async function verifyPasswordAgainstHash(plainText, hashStr) {
+  if (!plainText || !hashStr) return null
+  const trimmed = hashStr.trim()
+  try {
+    if (trimmed.startsWith('$2')) {
+      // Normalize $2y$ or $2b$ to $2a$ for bcryptjs verification
+      const normalized = trimmed.replace(/^\$2[yb]\$/, '$2a$')
+      return bcrypt.compareSync(plainText, normalized)
+    }
+    if (trimmed.startsWith('$argon2id$')) {
+      return await argon2Verify({ password: plainText, hash: trimmed })
+    }
+  } catch (err) {
+    console.error('Verify error:', err)
+    return false
+  }
+  return false
 }
 
 function analyzeHashString(hashStr) {
@@ -285,7 +291,7 @@ function generateMarkdown({ threadLink, deploymentSteps, tablesToBackup }) {
   const tablesValue = formatBullets(tablesToBackup, DEFAULTS.tablesToBackup)
 
   return [
-    'Microsoft Teams Thread Link',
+    'Nyra Thread Link',
     '',
     threadLinkValue,
     '',
@@ -318,15 +324,24 @@ function HashGeneratorTool() {
   const [outputFormat, setOutputFormat] = useState('raw')
   const [saltSeed, setSaltSeed] = useState(0)
 
-  const [bcryptHash, setBcryptHash] = useState('$2y$10$W9FoYzT6lW9slnGBHY4tEerKnx4XsUivB4pijN8gVX.mZn2UK1zpa')
-  const [argonHash, setArgonHash] = useState('$argon2id$v=19$m=1024,t=3,p=3$QkVDcUY4Qnl0cHMwdlNGWQ$fDknxsIMsJQXut6wxqLYmKtaQWWQEMuoSGoxQJKyxgY')
+  // SQL Query Customization state
+  const [sqlTargetUser, setSqlTargetUser] = useState('admin@example.com')
+  const [sqlTable, setSqlTable] = useState('users')
+  const [sqlColumn, setSqlColumn] = useState('password')
+
+  // Laravel standard initial default bcrypt hash for 'password'
+  const [bcryptHash, setBcryptHash] = useState('$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi')
+  const [argonHash, setArgonHash] = useState('$argon2id$v=19$m=1024,t=3,p=3$AAAAAAAAAAAAAAAAAAAAAA$xZLsaiLg7fwzkOVIiR4+o60D5Oky/nmrj9HvsHIJbwE')
   
   const [copiedBcrypt, setCopiedBcrypt] = useState(false)
   const [copiedArgon, setCopiedArgon] = useState(false)
   const [copiedCode, setCopiedCode] = useState(false)
 
   // Inspector state
-  const [inspectHash, setInspectHash] = useState('$2y$10$W9FoYzT6lW9slnGBHY4tEerKnx4XsUivB4pijN8gVX.mZn2UK1zpa')
+  const [inspectHash, setInspectHash] = useState('$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi')
+  const [inspectTestPassword, setInspectTestPassword] = useState('password')
+  const [inspectMatchResult, setInspectMatchResult] = useState(null)
+  const [isVerifying, setIsVerifying] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -334,13 +349,30 @@ function HashGeneratorTool() {
       const b = await generateBcryptHash(plaintext || 'password', cost)
       const a = await generateArgon2idHash(plaintext || 'password', argonMemory, argonTime, argonThreads)
       if (active) {
-        setBcryptHash(b)
-        setArgonHash(a)
+        if (b) setBcryptHash(b)
+        if (a) setArgonHash(a)
       }
     }
     run()
     return () => { active = false }
   }, [plaintext, cost, argonMemory, argonTime, argonThreads, saltSeed])
+
+  // Real-time verification effect in inspector
+  useEffect(() => {
+    let active = true
+    if (!inspectHash || !inspectTestPassword) {
+      setInspectMatchResult(null)
+      return
+    }
+    setIsVerifying(true)
+    verifyPasswordAgainstHash(inspectTestPassword, inspectHash).then((matched) => {
+      if (active) {
+        setInspectMatchResult(matched)
+        setIsVerifying(false)
+      }
+    })
+    return () => { active = false }
+  }, [inspectHash, inspectTestPassword])
 
   const copyToClipboard = async (text, setter) => {
     try {
@@ -370,6 +402,10 @@ function HashGeneratorTool() {
 
   const getCodeSnippet = () => {
     const inputStr = plaintext || 'password'
+    const targetUser = sqlTargetUser.trim() || 'admin@example.com'
+    const targetTable = sqlTable.trim() || 'users'
+    const targetCol = sqlColumn.trim() || 'password'
+
     if (outputFormat === 'raw') {
       if (hashType === 'bcrypt') return bcryptHash
       if (hashType === 'argon') return argonHash
@@ -378,27 +414,89 @@ function HashGeneratorTool() {
 
     if (outputFormat === 'laravel') {
       if (hashType === 'bcrypt') {
-        return `use Illuminate\\Support\\Facades\\Hash;\n\n// Generate Bcrypt Hash\n$hashed = Hash::make('${inputStr}');\n// Output: ${bcryptHash}`
+        return `use Illuminate\\Support\\Facades\\Hash;\n\n// Generate Bcrypt Hash (Default Laravel)\n$hashed = Hash::make('${inputStr}');\n// Verified Hash: ${bcryptHash}`
       }
       if (hashType === 'argon') {
-        return `use Illuminate\\Support\\Facades\\Hash;\n\n// Generate Argon2id Hash\n$hashed = Hash::make('${inputStr}', [\n    'memory' => ${argonMemory},\n    'time' => ${argonTime},\n    'threads' => ${argonThreads},\n]);\n// Output: ${argonHash}`
+        return `use Illuminate\\Support\\Facades\\Hash;\n\n// Generate Argon2id Hash\n$hashed = Hash::make('${inputStr}', [\n    'memory' => ${argonMemory},\n    'time' => ${argonTime},\n    'threads' => ${argonThreads},\n]);\n// Verified Hash: ${argonHash}`
       }
-      return `use Illuminate\\Support\\Facades\\Hash;\n\n// 1. Bcrypt Hash (Hash::make)\n$bcrypt = Hash::make('${inputStr}');\n// Result: ${bcryptHash}\n\n// 2. Argon2id Hash (Hash::argon / driver)\n$argon = Hash::make('${inputStr}', [\n    'memory' => ${argonMemory},\n    'time' => ${argonTime},\n    'threads' => ${argonThreads},\n]);\n// Result: ${argonHash}`
+      return `use Illuminate\\Support\\Facades\\Hash;\n\n// 1. Bcrypt Hash (Hash::make)\n$bcrypt = Hash::make('${inputStr}');\n// Result: ${bcryptHash}\n\n// 2. Argon2id Hash\n$argon = Hash::make('${inputStr}', [\n    'memory' => ${argonMemory},\n    'time' => ${argonTime},\n    'threads' => ${argonThreads},\n]);\n// Result: ${argonHash}`
     }
 
     if (outputFormat === 'sql') {
       if (hashType === 'bcrypt') {
-        return `-- Update MySQL Password (Bcrypt)\nUPDATE users \nSET password = '${bcryptHash}' \nWHERE email = 'user@example.com';`
+        return [
+          `-- ============================================================`,
+          `-- Update MySQL Password (Bcrypt $2y$ - Laravel Compatible)`,
+          `-- Target Password: "${inputStr}"`,
+          `-- ============================================================`,
+          ``,
+          `-- Option 1: Update by Email (Recommended)`,
+          `UPDATE \`${targetTable}\``,
+          `SET \`${targetCol}\` = '${bcryptHash}',`,
+          `    \`updated_at\` = NOW()`,
+          `WHERE \`email\` = '${targetUser}';`,
+          ``,
+          `-- Option 2: Update by ID`,
+          `UPDATE \`${targetTable}\``,
+          `SET \`${targetCol}\` = '${bcryptHash}',`,
+          `    \`updated_at\` = NOW()`,
+          `WHERE \`id\` = 1;`,
+          ``,
+          `-- ⚠️ CLI NOTE: When executing via MySQL CLI / Bash (mysql -e),`,
+          `-- wrap query in SINGLE QUOTES ('...') to prevent bash from expanding '$2y$' as shell variables:`,
+          `-- mysql -u root -p database_name -e 'UPDATE \`${targetTable}\` SET \`${targetCol}\` = "${bcryptHash}", \`updated_at\` = NOW() WHERE \`email\` = "${targetUser}";'`
+        ].join('\n')
       }
+
       if (hashType === 'argon') {
-        return `-- Update MySQL Password (Argon2id)\nUPDATE users \nSET password = '${argonHash}' \nWHERE email = 'user@example.com';`
+        return [
+          `-- ============================================================`,
+          `-- Update MySQL Password (Argon2id - Laravel Compatible)`,
+          `-- Target Password: "${inputStr}"`,
+          `-- ============================================================`,
+          ``,
+          `-- Option 1: Update by Email`,
+          `UPDATE \`${targetTable}\``,
+          `SET \`${targetCol}\` = '${argonHash}',`,
+          `    \`updated_at\` = NOW()`,
+          `WHERE \`email\` = '${targetUser}';`,
+          ``,
+          `-- Option 2: Update by ID`,
+          `UPDATE \`${targetTable}\``,
+          `SET \`${targetCol}\` = '${argonHash}',`,
+          `    \`updated_at\` = NOW()`,
+          `WHERE \`id\` = 1;`,
+          ``,
+          `-- ⚠️ CLI NOTE: When executing via bash, wrap in single quotes:`,
+          `-- mysql -u root -p database_name -e 'UPDATE \`${targetTable}\` SET \`${targetCol}\` = "${argonHash}", \`updated_at\` = NOW() WHERE \`email\` = "${targetUser}";'`
+        ].join('\n')
       }
-      return `-- Update MySQL Password (Bcrypt)\nUPDATE users SET password = '${bcryptHash}' WHERE id = 1;\n\n-- Update MySQL Password (Argon2id)\nUPDATE users SET password = '${argonHash}' WHERE id = 1;`
+
+      return [
+        `-- ============================================================`,
+        `-- Update MySQL Password (Both Drivers - Laravel Compatible)`,
+        `-- Target Password: "${inputStr}"`,
+        `-- ============================================================`,
+        ``,
+        `-- 1. Bcrypt ($2y$ - Laravel Standard Default)`,
+        `UPDATE \`${targetTable}\``,
+        `SET \`${targetCol}\` = '${bcryptHash}',`,
+        `    \`updated_at\` = NOW()`,
+        `WHERE \`email\` = '${targetUser}';`,
+        ``,
+        `-- 2. Argon2id ($argon2id$)`,
+        `UPDATE \`${targetTable}\``,
+        `SET \`${targetCol}\` = '${argonHash}',`,
+        `    \`updated_at\` = NOW()`,
+        `WHERE \`email\` = '${targetUser}';`,
+        ``,
+        `-- ⚠️ CLI NOTE: Wrap in SINGLE QUOTES ('...') in bash so '$' is not expanded!`
+      ].join('\n')
     }
 
     if (outputFormat === 'seeder') {
       const activeHash = hashType === 'argon' ? argonHash : bcryptHash
-      return `// Laravel Database Seeder / User Factory\nUser::create([\n    'name' => 'Developer User',\n    'email' => 'admin@example.com',\n    'password' => '${activeHash}', // plain: ${inputStr}\n]);`
+      return `// Laravel Database Seeder / User Factory\n\\App\\Models\\User::updateOrCreate(\n    ['email' => '${targetUser}'],\n    [\n        'name' => 'Admin User',\n        'password' => '${activeHash}', // plain: ${inputStr}\n    ]\n);`
     }
 
     if (outputFormat === 'env') {
@@ -584,6 +682,45 @@ function HashGeneratorTool() {
                 </select>
               </div>
 
+              {/* SQL Specific Options */}
+              {outputFormat === 'sql' && (
+                <div style={{ marginTop: '-4px', marginBottom: '16px', padding: '12px', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-default)' }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '8px' }}>
+                    MySQL Query Target Parameters
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '8px' }}>
+                    <div>
+                      <label style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '3px' }}>
+                        Target Email / Username
+                      </label>
+                      <input
+                        type="text"
+                        className="input"
+                        style={{ padding: '6px 10px', fontSize: '0.8rem' }}
+                        value={sqlTargetUser}
+                        onChange={(e) => setSqlTargetUser(e.target.value)}
+                        placeholder="admin@example.com"
+                        spellCheck="false"
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '3px' }}>
+                        Table Name
+                      </label>
+                      <input
+                        type="text"
+                        className="input"
+                        style={{ padding: '6px 10px', fontSize: '0.8rem' }}
+                        value={sqlTable}
+                        onChange={(e) => setSqlTable(e.target.value)}
+                        placeholder="users"
+                        spellCheck="false"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Actions */}
               <div className="actions">
                 <button
@@ -602,6 +739,8 @@ function HashGeneratorTool() {
                     setPlaintext('')
                     setCost(10)
                     setArgonMemory(1024)
+                    setSqlTargetUser('admin@example.com')
+                    setSqlTable('users')
                   }}
                 >
                   <ResetIcon />
@@ -633,14 +772,20 @@ function HashGeneratorTool() {
                 <button
                   type="button"
                   className="preset-chip"
-                  onClick={() => setInspectHash('$2y$10$W9FoYzT6lW9slnGBHY4tEerKnx4XsUivB4pijN8gVX.mZn2UK1zpa')}
+                  onClick={() => {
+                    setInspectHash('$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi')
+                    setInspectTestPassword('password')
+                  }}
                 >
-                  Bcrypt Sample ($2y$)
+                  Bcrypt Laravel Default ($2y$)
                 </button>
                 <button
                   type="button"
                   className="preset-chip"
-                  onClick={() => setInspectHash('$argon2id$v=19$m=1024,t=3,p=3$QkVDcUY4Qnl0cHMwdlNGWQ$fDknxsIMsJQXut6wxqLYmKtaQWWQEMuoSGoxQJKyxgY')}
+                  onClick={() => {
+                    setInspectHash('$argon2id$v=19$m=1024,t=3,p=3$AAAAAAAAAAAAAAAAAAAAAA$xZLsaiLg7fwzkOVIiR4+o60D5Oky/nmrj9HvsHIJbwE')
+                    setInspectTestPassword('password')
+                  }}
                 >
                   Argon2id Sample ($argon2id$)
                 </button>
@@ -696,6 +841,59 @@ function HashGeneratorTool() {
                     {inspectInfo.message}
                   </p>
                 )}
+              </div>
+
+              {/* Password Verifier Section */}
+              <div style={{ marginTop: '16px', padding: '14px', background: 'var(--bg-card)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-default)' }}>
+                <label className="field-label" htmlFor="testPasswordInput" style={{ marginBottom: '6px' }}>
+                  <span className="field-label-icon"><KeyIcon /></span>
+                  Test Plaintext Password Against this Hash
+                </label>
+                <input
+                  id="testPasswordInput"
+                  type="text"
+                  className="input"
+                  placeholder="Type plaintext password to verify (e.g. password)..."
+                  value={inspectTestPassword}
+                  onChange={(e) => setInspectTestPassword(e.target.value)}
+                  spellCheck="false"
+                />
+
+                <div style={{ marginTop: '10px' }}>
+                  {!inspectHash ? (
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      Paste a hash above to begin verification.
+                    </span>
+                  ) : !inspectTestPassword ? (
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      Enter a password to test matching.
+                    </span>
+                  ) : isVerifying ? (
+                    <span className="status-badge" style={{ background: 'rgba(56, 139, 253, 0.15)', color: 'var(--accent-blue)', borderColor: 'rgba(56, 139, 253, 0.3)' }}>
+                      Verifying cryptographic match...
+                    </span>
+                  ) : inspectMatchResult === true ? (
+                    <div style={{ padding: '10px 12px', borderRadius: 'var(--radius-sm)', background: 'rgba(63, 185, 80, 0.15)', border: '1px solid rgba(63, 185, 80, 0.4)', color: '#56d364', fontSize: '0.82rem', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                      <CheckIcon />
+                      <div>
+                        <strong>MATCH! (Valid untuk Login)</strong>
+                        <div style={{ fontSize: '0.74rem', opacity: 0.9, marginTop: '2px' }}>
+                          Password &ldquo;{inspectTestPassword}&rdquo; cocok dengan hash ini. Laravel <code>Hash::check()</code> / <code>Auth::attempt()</code> akan berhasil.
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ padding: '10px 12px', borderRadius: 'var(--radius-sm)', background: 'rgba(248, 81, 73, 0.15)', border: '1px solid rgba(248, 81, 73, 0.4)', color: '#f85149', fontSize: '0.82rem', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                      <span style={{ fontWeight: 'bold', fontSize: '1rem', lineHeight: '1' }}>✕</span>
+                      <div>
+                        <strong>MISMATCH (Login akan Gagal)</strong>
+                        <div style={{ fontSize: '0.74rem', opacity: 0.9, marginTop: '2px' }}>
+                          Password &ldquo;{inspectTestPassword}&rdquo; TIDAK cocok dengan hash ini. Jika disimpan di database, login user akan ditolak.
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}
