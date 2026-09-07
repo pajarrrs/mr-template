@@ -215,6 +215,67 @@
     .inspector-stat { background: var(--bg-card); padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--border-muted); }
     .inspector-stat-label { font-size: 0.68rem; color: var(--text-muted); margin-bottom: 2px; text-transform: uppercase; }
     .inspector-stat-value { font-size: 0.85rem; font-weight: 600; color: var(--text-primary); font-family: 'JetBrains Mono', monospace; }
+
+    /* ─── Secure Notes & Tasks Styles ─── */
+    .secure-wrapper { width: 100%; max-width: 1080px; margin: 0 auto; }
+    .secure-lock-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 16px; min-height: 480px; }
+    .secure-lock-card { background: var(--bg-card); border: 1px solid var(--border-default); border-radius: var(--radius-lg); padding: 32px 28px; width: 100%; max-width: 400px; box-shadow: var(--shadow-lg); text-align: center; }
+    .secure-lock-icon { width: 50px; height: 50px; border-radius: 50%; background: rgba(56, 139, 253, 0.12); border: 1px solid rgba(56, 139, 253, 0.3); color: var(--accent-blue); display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; box-shadow: 0 0 16px rgba(56, 139, 253, 0.15); }
+    .secure-lock-icon svg { width: 24px; height: 24px; }
+    .secure-lock-title { font-size: 1.2rem; font-weight: 700; color: var(--text-primary); margin-bottom: 6px; }
+    .secure-lock-desc { font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 20px; line-height: 1.5; }
+    .pin-keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 14px; }
+    .pin-key { height: 48px; border-radius: var(--radius-md); background: var(--bg-tertiary); border: 1px solid var(--border-default); color: var(--text-primary); font-size: 1.15rem; font-weight: 600; cursor: pointer; transition: all 0.15s ease; display: flex; align-items: center; justify-content: center; user-select: none; }
+    .pin-key:hover { background: var(--bg-hover); border-color: var(--accent-blue); color: #fff; transform: translateY(-1px); }
+    .pin-key:active { transform: translateY(1px); background: rgba(56, 139, 253, 0.2); }
+    .pin-key.action-key { font-size: 0.78rem; color: var(--text-secondary); font-weight: 500; }
+    .secure-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; flex-wrap: wrap; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid var(--border-muted); }
+    .secure-tab-group { display: flex; background: var(--bg-secondary); padding: 4px; border-radius: var(--radius-sm); border: 1px solid var(--border-default); gap: 4px; }
+    .secure-tab-btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: var(--radius-sm); background: transparent; border: none; color: var(--text-secondary); font-size: 0.82rem; font-weight: 500; cursor: pointer; transition: all var(--transition); }
+    .secure-tab-btn svg { width: 14px; height: 14px; }
+    .secure-tab-btn.active { background: var(--bg-card); color: var(--text-primary); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3); }
+    .task-item { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; background: var(--bg-card); border: 1px solid var(--border-default); border-radius: var(--radius-sm); margin-bottom: 10px; transition: all var(--transition); }
+    .task-item:hover { border-color: var(--border-focus); }
+    .task-item.completed { opacity: 0.7; background: rgba(13, 17, 23, 0.7); }
+    .task-item.completed .task-text { text-decoration: line-through; color: var(--text-muted); }
+    .task-item-header { display: flex; align-items: center; gap: 10px; width: 100%; }
+    .task-desc { font-size: 0.81rem; color: var(--text-secondary); background: var(--bg-primary); padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-muted); white-space: pre-wrap; line-height: 1.45; margin-left: 32px; }
+    .task-item-footer { display: flex; align-items: center; justify-content: space-between; margin-left: 32px; font-size: 0.72rem; color: var(--text-muted); flex-wrap: wrap; gap: 8px; }
+    .task-date-badge { display: inline-flex; align-items: center; gap: 5px; color: var(--text-muted); }
+    .task-date-badge svg { width: 13px; height: 13px; opacity: 0.75; }
+    .status-select { font-size: 0.72rem; font-weight: 600; padding: 2px 8px; border-radius: 4px; background: var(--bg-tertiary); border: 1px solid var(--border-muted); color: var(--text-primary); cursor: pointer; outline: none; }
+    .status-select.todo { background: rgba(56, 139, 253, 0.12); color: var(--accent-blue); border-color: rgba(56, 139, 253, 0.3); }
+    .status-select.in-progress { background: rgba(210, 153, 34, 0.15); color: #d29922; border-color: rgba(210, 153, 34, 0.3); }
+    .status-select.done { background: rgba(63, 185, 80, 0.15); color: var(--accent-green); border-color: rgba(63, 185, 80, 0.3); }
+    .status-select.blocked { background: rgba(248, 81, 73, 0.15); color: var(--accent-red); border-color: rgba(248, 81, 73, 0.3); }
+    .task-checkbox-btn { background: transparent; border: none; cursor: pointer; color: var(--text-muted); display: flex; align-items: center; justify-content: center; padding: 2px; border-radius: 4px; transition: color 0.15s ease, background 0.15s ease; width: 22px; height: 22px; flex-shrink: 0; }
+    .task-checkbox-btn:hover { color: var(--accent-blue); background: rgba(56, 139, 253, 0.1); }
+    .task-checkbox-btn.checked { color: var(--accent-green); }
+    .task-checkbox-btn svg { width: 16px; height: 16px; }
+    .task-text { flex: 1; font-size: 0.86rem; color: var(--text-primary); word-break: break-word; }
+    .task-meta { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .priority-badge { font-size: 0.68rem; font-weight: 600; padding: 2px 7px; border-radius: 4px; text-transform: uppercase; }
+    .priority-badge.high { background: rgba(248, 81, 73, 0.15); color: var(--accent-red); border: 1px solid rgba(248, 81, 73, 0.3); }
+    .priority-badge.medium { background: rgba(210, 153, 34, 0.15); color: #d29922; border: 1px solid rgba(210, 153, 34, 0.3); }
+    .priority-badge.low { background: rgba(56, 139, 253, 0.15); color: var(--accent-blue); border: 1px solid rgba(56, 139, 253, 0.3); }
+    .category-badge { font-size: 0.68rem; padding: 2px 7px; border-radius: 4px; background: var(--bg-tertiary); color: var(--text-secondary); border: 1px solid var(--border-muted); }
+    .btn-task-delete { background: transparent; border: 1px solid transparent; color: var(--text-muted); cursor: pointer; padding: 3px 8px; border-radius: var(--radius-sm); display: inline-flex; align-items: center; gap: 5px; font-size: 0.73rem; font-weight: 500; transition: all 0.15s ease; flex-shrink: 0; }
+    .btn-task-delete svg { width: 13px; height: 13px; }
+    .btn-task-delete:hover { color: var(--accent-red); background: rgba(248, 81, 73, 0.12); border-color: rgba(248, 81, 73, 0.3); }
+    .empty-state-box { padding: 36px 20px; text-align: center; background: var(--bg-card); border: 1px dashed var(--border-default); border-radius: var(--radius-md); color: var(--text-muted); display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .empty-state-box svg { width: 28px; height: 28px; opacity: 0.45; margin-bottom: 8px; }
+    .notes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; margin-top: 16px; }
+    .note-card { background: var(--bg-card); border: 1px solid var(--border-default); border-radius: var(--radius-md); padding: 16px; display: flex; flex-direction: column; justify-content: space-between; transition: all var(--transition); cursor: pointer; }
+    .note-card:hover { border-color: var(--border-focus); box-shadow: var(--shadow-sm); transform: translateY(-1px); }
+    .note-card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+    .note-title { font-size: 0.95rem; font-weight: 600; color: var(--text-primary); }
+    .note-preview { font-size: 0.78rem; color: var(--text-secondary); font-family: 'JetBrains Mono', monospace; background: var(--bg-primary); padding: 10px; border-radius: var(--radius-sm); max-height: 110px; overflow: hidden; text-overflow: ellipsis; white-space: pre-wrap; margin-bottom: 12px; border: 1px solid var(--border-muted); line-height: 1.45; }
+    .note-footer { display: flex; align-items: center; justify-content: space-between; padding-top: 10px; border-top: 1px solid var(--border-muted); font-size: 0.72rem; color: var(--text-muted); }
+    .modal-backdrop { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 16px; }
+    .modal-card { background: var(--bg-card); border: 1px solid var(--border-default); border-radius: var(--radius-lg); padding: 24px; width: 100%; max-width: 440px; box-shadow: var(--shadow-lg); }
+    .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .modal-title { font-size: 1.1rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 8px; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
   </style>
 </head>
 <body>
@@ -344,6 +405,81 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <polyline points="16 18 22 12 16 6" />
         <polyline points="8 6 2 12 8 18" />
+      </svg>
+    );
+
+    const UnlockIcon = () => (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+        <path d="M7 11V7a5 5 0 0 1 9.9-1" />
+      </svg>
+    );
+
+    const CheckSquareIcon = () => (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="9 11 12 14 22 4" />
+        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+      </svg>
+    );
+
+    const SquareIcon = () => (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+      </svg>
+    );
+
+    const StickyNoteIcon = () => (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+        <polyline points="14 2 14 8 20 8" />
+        <line x1="16" y1="13" x2="8" y2="13" />
+        <line x1="16" y1="17" x2="8" y2="17" />
+      </svg>
+    );
+
+    const TrashIcon = () => (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="3 6 5 6 21 6" />
+        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+      </svg>
+    );
+
+    const PlusIcon = () => (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="12" y1="5" x2="12" y2="19" />
+        <line x1="5" y1="12" x2="19" y2="12" />
+      </svg>
+    );
+
+    const SearchIcon = () => (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="11" cy="11" r="8" />
+        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+      </svg>
+    );
+
+    const DownloadIcon = () => (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+        <polyline points="7 10 12 15 17 10" />
+        <line x1="12" y1="15" x2="12" y2="3" />
+      </svg>
+    );
+
+    const UploadIcon = () => (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+        <polyline points="17 8 12 3 7 8" />
+        <line x1="12" y1="3" x2="12" y2="15" />
+      </svg>
+    );
+
+    const CalendarIcon = () => (
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+        <line x1="16" y1="2" x2="16" y2="6" />
+        <line x1="8" y1="2" x2="8" y2="6" />
+        <line x1="3" y1="10" x2="21" y2="10" />
       </svg>
     );
 
@@ -921,9 +1057,9 @@
                         <div style={{ padding: '10px 12px', borderRadius: 'var(--radius-sm)', background: 'rgba(63, 185, 80, 0.15)', border: '1px solid rgba(63, 185, 80, 0.4)', color: '#56d364', fontSize: '0.82rem', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
                           <CheckIcon />
                           <div>
-                            <strong>MATCH! (Valid untuk Login)</strong>
+                            <strong>MATCH! (Valid for Login)</strong>
                             <div style={{ fontSize: '0.74rem', opacity: 0.9, marginTop: '2px' }}>
-                              Password &ldquo;{inspectTestPassword}&rdquo; cocok dengan hash ini. Laravel <code>Hash::check()</code> / <code>Auth::attempt()</code> akan berhasil.
+                              Password &ldquo;{inspectTestPassword}&rdquo; matches this hash. Laravel <code>Hash::check()</code> / <code>Auth::attempt()</code> will succeed.
                             </div>
                           </div>
                         </div>
@@ -931,9 +1067,9 @@
                         <div style={{ padding: '10px 12px', borderRadius: 'var(--radius-sm)', background: 'rgba(248, 81, 73, 0.15)', border: '1px solid rgba(248, 81, 73, 0.4)', color: '#f85149', fontSize: '0.82rem', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
                           <span style={{ fontWeight: 'bold', fontSize: '1rem', lineHeight: '1' }}>✕</span>
                           <div>
-                            <strong>MISMATCH (Login akan Gagal)</strong>
+                            <strong>MISMATCH (Login will Fail)</strong>
                             <div style={{ fontSize: '0.74rem', opacity: 0.9, marginTop: '2px' }}>
-                              Password &ldquo;{inspectTestPassword}&rdquo; TIDAK cocok dengan hash ini. Jika disimpan di database, login user akan ditolak.
+                              Password &ldquo;{inspectTestPassword}&rdquo; does NOT match this hash. If stored in database, user authentication will be rejected.
                             </div>
                           </div>
                         </div>
@@ -1007,7 +1143,1247 @@
       );
     }
 
-    function App() {
+// ─── Secure Notes & Tasks Tool Component ──────────────────────────────────
+
+const SECURE_STORAGE_KEYS = {
+  CODE_HASH: 'worktools_access_code_hash',
+  TASKS: 'worktools_secure_tasks',
+  NOTES: 'worktools_secure_notes',
+}
+
+const DEFAULT_TASKS = []
+const DEFAULT_NOTES = []
+
+async function hashAccessCode(code) {
+  if (window.crypto && window.crypto.subtle) {
+    const encoder = new TextEncoder()
+    const data = encoder.encode('worktools_salt_' + code)
+    const hashBuffer = await window.crypto.subtle.digest('SHA-256', data)
+    return Array.from(new Uint8Array(hashBuffer))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('')
+  }
+  let hash = 0
+  for (let i = 0; i < code.length; i++) {
+    hash = (hash << 5) - hash + code.charCodeAt(i)
+    hash |= 0
+  }
+  return 'simple_' + hash
+}
+
+function formatTaskDate(isoString) {
+  if (!isoString) return ''
+  try {
+    const d = new Date(isoString)
+    if (isNaN(d.getTime())) return ''
+    return new Intl.DateTimeFormat('en-US', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(d)
+  } catch {
+    return ''
+  }
+}
+
+function SecureNotesTool() {
+  const [isLoaded, setIsLoaded] = useState(false)
+  const [hasCode, setHasCode] = useState(false)
+  const [isUnlocked, setIsUnlocked] = useState(false)
+
+  // Auth Inputs
+  const [inputCode, setInputCode] = useState('')
+  const [confirmCode, setConfirmCode] = useState('')
+  const [showCode, setShowCode] = useState(false)
+  const [authError, setAuthError] = useState('')
+
+  // Data
+  const [tab, setTab] = useState('tasks') // 'tasks' | 'notes'
+  const [tasks, setTasks] = useState([])
+  const [notes, setNotes] = useState([])
+
+  // Task Form & Filter
+  const [newTaskText, setNewTaskText] = useState('')
+  const [newTaskDesc, setNewTaskDesc] = useState('')
+  const [newTaskStatus, setNewTaskStatus] = useState('todo') // 'todo' | 'in-progress' | 'done' | 'blocked'
+  const [newTaskPriority, setNewTaskPriority] = useState('medium')
+  const [newTaskCategory, setNewTaskCategory] = useState('Feature')
+  const [showAddDesc, setShowAddDesc] = useState(false)
+  const [taskFilter, setTaskFilter] = useState('all') // 'all' | 'todo' | 'in-progress' | 'done' | 'blocked'
+
+  // Note Form & Search
+  const [searchQuery, setSearchQuery] = useState('')
+  const [editingNote, setEditingNote] = useState(null) // null or note object
+  const [copiedNoteId, setCopiedNoteId] = useState(null)
+
+  // Modals
+  const [showSettingsModal, setShowSettingsModal] = useState(false)
+  const [showExportModal, setShowExportModal] = useState(false)
+  const [showResetModal, setShowResetModal] = useState(false)
+
+  // Change PIN State
+  const [oldPin, setOldPin] = useState('')
+  const [newPin, setNewPin] = useState('')
+  const [confirmNewPin, setConfirmNewPin] = useState('')
+  const [pinChangeError, setPinChangeError] = useState('')
+  const [pinChangeSuccess, setPinChangeSuccess] = useState('')
+
+  // Export/Import State
+  const [copiedExport, setCopiedExport] = useState(false)
+  const [importJson, setImportJson] = useState('')
+  const [importError, setImportError] = useState('')
+  const [importSuccess, setImportSuccess] = useState('')
+
+  // Load Initial State
+  useEffect(() => {
+    try {
+      const storedHash = localStorage.getItem(SECURE_STORAGE_KEYS.CODE_HASH)
+      if (storedHash) {
+        setHasCode(true)
+      } else {
+        setHasCode(false)
+      }
+
+      const storedTasks = localStorage.getItem(SECURE_STORAGE_KEYS.TASKS)
+      if (storedTasks) {
+        try {
+          const parsed = JSON.parse(storedTasks)
+          // If stored tasks contain previous dummy tasks, clear them to empty
+          if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].id === '1' && parsed[0].text && parsed[0].text.includes('GitLab merge request')) {
+            setTasks([])
+            localStorage.setItem(SECURE_STORAGE_KEYS.TASKS, JSON.stringify([]))
+          } else {
+            setTasks(Array.isArray(parsed) ? parsed : [])
+          }
+        } catch {
+          setTasks([])
+        }
+      } else {
+        setTasks([])
+        localStorage.setItem(SECURE_STORAGE_KEYS.TASKS, JSON.stringify([]))
+      }
+
+      const storedNotes = localStorage.getItem(SECURE_STORAGE_KEYS.NOTES)
+      if (storedNotes) {
+        try {
+          const parsed = JSON.parse(storedNotes)
+          // If stored notes contain previous dummy notes, clear them to empty
+          if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].id === '1' && parsed[0].title && parsed[0].title.includes('Production Deployment')) {
+            setNotes([])
+            localStorage.setItem(SECURE_STORAGE_KEYS.NOTES, JSON.stringify([]))
+          } else {
+            setNotes(Array.isArray(parsed) ? parsed : [])
+          }
+        } catch {
+          setNotes([])
+        }
+      } else {
+        setNotes([])
+        localStorage.setItem(SECURE_STORAGE_KEYS.NOTES, JSON.stringify([]))
+      }
+    } catch (e) {
+      console.error('Failed to load secure notes data:', e)
+    }
+    setIsLoaded(true)
+  }, [])
+
+  // Sync Data to LocalStorage
+  const saveTasks = (newTasks) => {
+    setTasks(newTasks)
+    localStorage.setItem(SECURE_STORAGE_KEYS.TASKS, JSON.stringify(newTasks))
+  }
+
+  const saveNotes = (newNotes) => {
+    setNotes(newNotes)
+    localStorage.setItem(SECURE_STORAGE_KEYS.NOTES, JSON.stringify(newNotes))
+  }
+
+  // Handle First Time Setup
+  const handleSetupCode = async (e) => {
+    if (e) e.preventDefault()
+    setAuthError('')
+    if (!inputCode || inputCode.length < 4) {
+      setAuthError('Access code must be at least 4 characters!')
+      return
+    }
+    if (inputCode !== confirmCode) {
+      setAuthError('Access code confirmation does not match!')
+      return
+    }
+
+    const hashed = await hashAccessCode(inputCode)
+    localStorage.setItem(SECURE_STORAGE_KEYS.CODE_HASH, hashed)
+    setHasCode(true)
+    setIsUnlocked(true)
+    setInputCode('')
+    setConfirmCode('')
+  }
+
+  // Handle Unlock
+  const handleUnlock = async (e) => {
+    if (e) e.preventDefault()
+    setAuthError('')
+    if (!inputCode) {
+      setAuthError('Please enter your access code!')
+      return
+    }
+
+    const storedHash = localStorage.getItem(SECURE_STORAGE_KEYS.CODE_HASH)
+    const hashed = await hashAccessCode(inputCode)
+
+    if (hashed === storedHash) {
+      setIsUnlocked(true)
+      setInputCode('')
+      setAuthError('')
+    } else {
+      setAuthError('Incorrect access code! Please try again.')
+    }
+  }
+
+  // Keypad click handler
+  const handleKeypadPress = (val) => {
+    setAuthError('')
+    if (val === 'backspace') {
+      setInputCode(prev => prev.slice(0, -1))
+    } else if (val === 'clear') {
+      setInputCode('')
+    } else {
+      setInputCode(prev => prev + val)
+    }
+  }
+
+  // Lock Action
+  const handleLockNow = () => {
+    setIsUnlocked(false)
+    setInputCode('')
+    setAuthError('')
+    setEditingNote(null)
+  }
+
+  // Change PIN handler
+  const handleChangePin = async () => {
+    setPinChangeError('')
+    setPinChangeSuccess('')
+
+    const storedHash = localStorage.getItem(SECURE_STORAGE_KEYS.CODE_HASH)
+    const oldHashed = await hashAccessCode(oldPin)
+
+    if (oldHashed !== storedHash) {
+      setPinChangeError('Current access code is incorrect!')
+      return
+    }
+    if (!newPin || newPin.length < 4) {
+      setPinChangeError('New access code must be at least 4 characters!')
+      return
+    }
+    if (newPin !== confirmNewPin) {
+      setPinChangeError('New access code confirmation does not match!')
+      return
+    }
+
+    const newHashed = await hashAccessCode(newPin)
+    localStorage.setItem(SECURE_STORAGE_KEYS.CODE_HASH, newHashed)
+    setPinChangeSuccess('Access code updated successfully!')
+    setOldPin('')
+    setNewPin('')
+    setConfirmNewPin('')
+    setTimeout(() => {
+      setShowSettingsModal(false)
+      setPinChangeSuccess('')
+    }, 1500)
+  }
+
+  // Reset All handler
+  const handleResetAll = () => {
+    localStorage.removeItem(SECURE_STORAGE_KEYS.CODE_HASH)
+    localStorage.removeItem(SECURE_STORAGE_KEYS.TASKS)
+    localStorage.removeItem(SECURE_STORAGE_KEYS.NOTES)
+    setHasCode(false)
+    setIsUnlocked(false)
+    setTasks(DEFAULT_TASKS)
+    setNotes(DEFAULT_NOTES)
+    setShowResetModal(false)
+    setShowSettingsModal(false)
+    setInputCode('')
+    setConfirmCode('')
+  }
+
+  // Task Actions
+  const handleAddTask = (e) => {
+    if (e) e.preventDefault()
+    if (!newTaskText.trim()) return
+
+    const newTask = {
+      id: Date.now().toString(),
+      text: newTaskText.trim(),
+      description: newTaskDesc.trim(),
+      status: newTaskStatus, // 'todo' | 'in-progress' | 'done' | 'blocked'
+      priority: newTaskPriority,
+      category: newTaskCategory,
+      completed: newTaskStatus === 'done',
+      createdAt: new Date().toISOString(),
+    }
+
+    saveTasks([newTask, ...tasks])
+    setNewTaskText('')
+    setNewTaskDesc('')
+    setNewTaskStatus('todo')
+    setShowAddDesc(false)
+  }
+
+  const handleToggleTask = (id) => {
+    saveTasks(tasks.map(t => {
+      if (t.id === id) {
+        const isDone = t.status === 'done' || t.completed
+        const nextStatus = isDone ? 'todo' : 'done'
+        return {
+          ...t,
+          status: nextStatus,
+          completed: !isDone,
+        }
+      }
+      return t
+    }))
+  }
+
+  const handleStatusChange = (id, newStatus) => {
+    saveTasks(tasks.map(t => {
+      if (t.id === id) {
+        return {
+          ...t,
+          status: newStatus,
+          completed: newStatus === 'done',
+        }
+      }
+      return t
+    }))
+  }
+
+  const handleDeleteTask = (id) => {
+    saveTasks(tasks.filter(t => t.id !== id))
+  }
+
+  const handleClearCompleted = () => {
+    saveTasks(tasks.filter(t => t.status !== 'done' && !t.completed))
+  }
+
+  // Note Actions
+  const handleSaveNote = (e) => {
+    if (e) e.preventDefault()
+    if (!editingNote || !editingNote.title.trim()) return
+
+    if (editingNote.id) {
+      // Update existing
+      saveNotes(notes.map(n => n.id === editingNote.id ? { ...editingNote, updatedAt: new Date().toISOString() } : n))
+    } else {
+      // Create new
+      const newNote = {
+        ...editingNote,
+        id: Date.now().toString(),
+        updatedAt: new Date().toISOString(),
+      }
+      saveNotes([newNote, ...notes])
+    }
+    setEditingNote(null)
+  }
+
+  const handleDeleteNote = (id) => {
+    saveNotes(notes.filter(n => n.id !== id))
+    if (editingNote && editingNote.id === id) {
+      setEditingNote(null)
+    }
+  }
+
+  const handleCopyNote = async (content, id) => {
+    try {
+      await navigator.clipboard.writeText(content)
+      setCopiedNoteId(id)
+      setTimeout(() => setCopiedNoteId(null), 2000)
+    } catch {
+      const el = document.createElement('textarea')
+      el.value = content
+      el.style.position = 'fixed'
+      el.style.opacity = '0'
+      document.body.appendChild(el)
+      el.select()
+      document.execCommand('copy')
+      document.body.removeChild(el)
+      setCopiedNoteId(id)
+      setTimeout(() => setCopiedNoteId(null), 2000)
+    }
+  }
+
+  // Export / Import Handlers
+  const handleExportJson = () => {
+    const backupData = {
+      version: '1.0',
+      exportedAt: new Date().toISOString(),
+      tasks,
+      notes,
+    }
+    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(backupData, null, 2))
+    const downloadAnchor = document.createElement('a')
+    downloadAnchor.setAttribute('href', dataStr)
+    downloadAnchor.setAttribute('download', `worktools_notes_backup_${new Date().toISOString().slice(0, 10)}.json`)
+    document.body.appendChild(downloadAnchor)
+    downloadAnchor.click()
+    downloadAnchor.remove()
+  }
+
+  const handleCopyExportJson = async () => {
+    const backupData = { version: '1.0', tasks, notes }
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(backupData, null, 2))
+      setCopiedExport(true)
+      setTimeout(() => setCopiedExport(false), 2000)
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  const handleImportJson = () => {
+    setImportError('')
+    setImportSuccess('')
+    try {
+      const parsed = JSON.parse(importJson)
+      if (!parsed || (!Array.isArray(parsed.tasks) && !Array.isArray(parsed.notes))) {
+        setImportError('Invalid JSON format! Must contain a tasks or notes array.')
+        return
+      }
+      if (Array.isArray(parsed.tasks)) saveTasks(parsed.tasks)
+      if (Array.isArray(parsed.notes)) saveNotes(parsed.notes)
+      setImportSuccess('Data restored successfully!')
+      setTimeout(() => {
+        setShowExportModal(false)
+        setImportSuccess('')
+        setImportJson('')
+      }, 1500)
+    } catch (err) {
+      setImportError(`Failed to parse JSON: ${err.message}`)
+    }
+  }
+
+  if (!isLoaded) {
+    return <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>Loading Workspace...</div>
+  }
+
+  // ── VIEW 1: FIRST-TIME SETUP ──────────────────────────────────────────────
+  if (!hasCode) {
+    return (
+      <div className="secure-wrapper">
+        <div className="secure-lock-screen">
+          <div className="secure-lock-card">
+            <div className="secure-lock-icon">
+              <ShieldCheckIcon />
+            </div>
+            <h2 className="secure-lock-title">Set Up Access Code</h2>
+            <p className="secure-lock-desc">
+              Create a PIN or passphrase to secure your private notes and to-do tasks in this browser.
+            </p>
+
+            <form onSubmit={handleSetupCode}>
+              <div className="field-group" style={{ textAlign: 'left', marginBottom: '14px' }}>
+                <label className="field-label" htmlFor="setupCode">
+                  <span className="field-label-icon"><KeyIcon /></span>
+                  Create Access Code (min. 4 characters)
+                </label>
+                <input
+                  id="setupCode"
+                  type={showCode ? 'text' : 'password'}
+                  className="input"
+                  value={inputCode}
+                  onChange={(e) => setInputCode(e.target.value)}
+                  placeholder="e.g. 1234 or a secret passphrase..."
+                  autoComplete="new-password"
+                  autoFocus
+                />
+              </div>
+
+              <div className="field-group" style={{ textAlign: 'left', marginBottom: '18px' }}>
+                <label className="field-label" htmlFor="confirmCode">
+                  <span className="field-label-icon"><CheckIcon /></span>
+                  Confirm Access Code
+                </label>
+                <input
+                  id="confirmCode"
+                  type={showCode ? 'text' : 'password'}
+                  className="input"
+                  value={confirmCode}
+                  onChange={(e) => setConfirmCode(e.target.value)}
+                  placeholder="Re-enter access code..."
+                  autoComplete="new-password"
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={showCode}
+                    onChange={(e) => setShowCode(e.target.checked)}
+                  />
+                  Show Characters
+                </label>
+              </div>
+
+              {authError && (
+                <div style={{ padding: '8px 12px', background: 'rgba(248, 81, 73, 0.15)', border: '1px solid rgba(248, 81, 73, 0.4)', borderRadius: 'var(--radius-sm)', color: 'var(--accent-red)', fontSize: '0.8rem', marginBottom: '16px' }}>
+                  {authError}
+                </div>
+              )}
+
+              <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '10px' }}>
+                <ShieldCheckIcon /> Save & Unlock Workspace
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ── VIEW 2: LOCKED SCREEN ─────────────────────────────────────────────────
+  if (!isUnlocked) {
+    return (
+      <div className="secure-wrapper">
+        <div className="secure-lock-screen">
+          <div className="secure-lock-card">
+            <div className="secure-lock-icon">
+              <LockIcon />
+            </div>
+            <h2 className="secure-lock-title">Workspace Locked</h2>
+            <p className="secure-lock-desc">
+              Enter your Access Code (PIN or passphrase) to unlock your notes and tasks.
+            </p>
+
+            <form onSubmit={handleUnlock}>
+              <div style={{ position: 'relative', marginBottom: '14px' }}>
+                <input
+                  type={showCode ? 'text' : 'password'}
+                  className="input"
+                  style={{ textAlign: 'center', fontSize: '1.25rem', letterSpacing: showCode ? '2px' : '4px', fontWeight: 'bold' }}
+                  value={inputCode}
+                  onChange={(e) => setInputCode(e.target.value)}
+                  placeholder="••••"
+                  autoFocus
+                  autoComplete="current-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCode(!showCode)}
+                  style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
+                  title={showCode ? 'Hide' : 'Show'}
+                >
+                  <EyeIcon />
+                </button>
+              </div>
+
+              {authError && (
+                <div style={{ padding: '8px 12px', background: 'rgba(248, 81, 73, 0.15)', border: '1px solid rgba(248, 81, 73, 0.4)', borderRadius: 'var(--radius-sm)', color: 'var(--accent-red)', fontSize: '0.8rem', marginBottom: '14px' }}>
+                  {authError}
+                </div>
+              )}
+
+              <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '10px', marginBottom: '14px' }}>
+                <UnlockIcon /> Unlock Workspace
+              </button>
+
+              {/* Quick Numeric Keypad for fast PIN entry */}
+              <div className="pin-keypad">
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
+                  <button
+                    key={num}
+                    type="button"
+                    className="pin-key"
+                    onClick={() => handleKeypadPress(num.toString())}
+                  >
+                    {num}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  className="pin-key action-key"
+                  onClick={() => handleKeypadPress('clear')}
+                  title="Clear All"
+                >
+                  C
+                </button>
+                <button
+                  type="button"
+                  className="pin-key"
+                  onClick={() => handleKeypadPress('0')}
+                >
+                  0
+                </button>
+                <button
+                  type="button"
+                  className="pin-key action-key"
+                  onClick={() => handleKeypadPress('backspace')}
+                  title="Backspace"
+                >
+                  ⌫
+                </button>
+              </div>
+
+              <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'center' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowResetModal(true)}
+                  style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'underline' }}
+                >
+                  Forgot Access Code? Reset Workspace
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        {/* Reset Confirmation Modal */}
+        {showResetModal && (
+          <div className="modal-backdrop">
+            <div className="modal-card">
+              <div className="modal-header">
+                <span className="modal-title" style={{ color: 'var(--accent-red)' }}>
+                  <TrashIcon /> Reset Access Code?
+                </span>
+                <button type="button" className="btn-task-delete" onClick={() => setShowResetModal(false)}>✕</button>
+              </div>
+              <p style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: '16px' }}>
+                For security and privacy, resetting the access code will <strong>permanently delete all local notes and tasks</strong> stored in this browser.
+              </p>
+              <div className="modal-actions">
+                <button type="button" className="btn btn-reset" onClick={() => setShowResetModal(false)}>Cancel</button>
+                <button type="button" className="btn" style={{ background: 'var(--accent-red)', color: '#fff' }} onClick={handleResetAll}>
+                  Yes, Delete & Reset All
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // ── VIEW 3: UNLOCKED DASHBOARD ────────────────────────────────────────────
+  const filteredTasks = tasks.filter(t => {
+    const s = t.status || (t.completed ? 'done' : 'todo')
+    if (taskFilter === 'todo') return s === 'todo'
+    if (taskFilter === 'in-progress') return s === 'in-progress'
+    if (taskFilter === 'done') return s === 'done'
+    if (taskFilter === 'blocked') return s === 'blocked'
+    return true
+  })
+
+  const todoCount = tasks.filter(t => (t.status === 'todo' || (!t.status && !t.completed))).length
+  const inProgressCount = tasks.filter(t => t.status === 'in-progress').length
+  const doneCount = tasks.filter(t => t.status === 'done' || t.completed).length
+  const blockedCount = tasks.filter(t => t.status === 'blocked').length
+
+  const filteredNotes = notes.filter(n => {
+    const q = searchQuery.toLowerCase()
+    return n.title.toLowerCase().includes(q) || n.content.toLowerCase().includes(q) || (n.tag && n.tag.toLowerCase().includes(q))
+  })
+
+  return (
+    <div className="secure-wrapper">
+      {/* Top Workspace Toolbar */}
+      <div className="secure-toolbar">
+        <div className="secure-tab-group">
+          <button
+            type="button"
+            className={`secure-tab-btn ${tab === 'tasks' ? 'active' : ''}`}
+            onClick={() => { setTab('tasks'); setEditingNote(null); }}
+          >
+            <CheckSquareIcon />
+            Tasks ({tasks.filter(t => !t.completed && t.status !== 'done').length})
+          </button>
+          <button
+            type="button"
+            className={`secure-tab-btn ${tab === 'notes' ? 'active' : ''}`}
+            onClick={() => setTab('notes')}
+          >
+            <StickyNoteIcon />
+            Scratchpad Notes ({notes.length})
+          </button>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <button
+            type="button"
+            className="btn btn-reset"
+            style={{ fontSize: '0.78rem', padding: '6px 12px' }}
+            onClick={() => setShowExportModal(true)}
+            title="Backup & Restore JSON File"
+          >
+            <DownloadIcon /> JSON File
+          </button>
+
+          <button
+            type="button"
+            className="btn btn-reset"
+            style={{ fontSize: '0.78rem', padding: '6px 12px' }}
+            onClick={() => setShowSettingsModal(true)}
+            title="Change PIN / Access Code"
+          >
+            <KeyIcon /> Change PIN
+          </button>
+
+          <button
+            type="button"
+            className="btn"
+            style={{ background: 'rgba(248, 81, 73, 0.15)', color: 'var(--accent-red)', border: '1px solid rgba(248, 81, 73, 0.3)', fontSize: '0.78rem', padding: '6px 14px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+            onClick={handleLockNow}
+            title="Lock Workspace Now"
+          >
+            <LockIcon /> Lock Now
+          </button>
+        </div>
+      </div>
+
+      {/* ── TAB 1: TASKS / TO-DO ── */}
+      {tab === 'tasks' && (
+        <div>
+          {/* Add Task Panel */}
+          <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', padding: '16px', marginBottom: '16px' }}>
+            <form onSubmit={handleAddTask}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: showAddDesc ? '10px' : '6px' }}>
+                <input
+                  type="text"
+                  className="input"
+                  style={{ flex: '1 1 240px', padding: '8px 12px' }}
+                  placeholder="Task title (e.g. Implement SSO Login, Fix migration bug)..."
+                  value={newTaskText}
+                  onChange={(e) => setNewTaskText(e.target.value)}
+                />
+                <select
+                  className={`status-select ${newTaskStatus}`}
+                  style={{ minWidth: '120px', height: '38px', padding: '0 8px' }}
+                  value={newTaskStatus}
+                  onChange={(e) => setNewTaskStatus(e.target.value)}
+                  title="Initial status"
+                >
+                  <option value="todo">🔵 To Do</option>
+                  <option value="in-progress">🟡 In Progress</option>
+                  <option value="done">🟢 Done</option>
+                  <option value="blocked">🔴 Blocked</option>
+                </select>
+                <select
+                  className="select-input"
+                  style={{ width: 'auto', minWidth: '105px' }}
+                  value={newTaskPriority}
+                  onChange={(e) => setNewTaskPriority(e.target.value)}
+                >
+                  <option value="high">🔴 High</option>
+                  <option value="medium">🟡 Medium</option>
+                  <option value="low">🔵 Low</option>
+                </select>
+                <select
+                  className="select-input"
+                  style={{ width: 'auto', minWidth: '110px' }}
+                  value={newTaskCategory}
+                  onChange={(e) => setNewTaskCategory(e.target.value)}
+                >
+                  <option value="Feature">Feature</option>
+                  <option value="Bugfix">Bugfix</option>
+                  <option value="Deploy">Deploy</option>
+                  <option value="Review">Review</option>
+                  <option value="Personal">Personal</option>
+                </select>
+                <button type="submit" className="btn btn-primary" style={{ padding: '8px 16px', whiteSpace: 'nowrap' }}>
+                  <PlusIcon /> Add Task
+                </button>
+              </div>
+
+              {/* Collapsible / Expandable Description */}
+              <div>
+                {!showAddDesc ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowAddDesc(true)}
+                    style={{ background: 'transparent', border: 'none', color: 'var(--accent-blue)', fontSize: '0.78rem', cursor: 'pointer', padding: '2px 0', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                  >
+                    <PlusIcon /> Add Description / Details (optional)
+                  </button>
+                ) : (
+                  <div>
+                    <textarea
+                      className="textarea"
+                      style={{ minHeight: '65px', padding: '8px 12px', fontSize: '0.82rem', marginBottom: '6px' }}
+                      placeholder="Add detailed task notes, reproduction steps, pull request URL, etc..."
+                      value={newTaskDesc}
+                      onChange={(e) => setNewTaskDesc(e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => { setShowAddDesc(false); setNewTaskDesc(''); }}
+                      style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '0.72rem', cursor: 'pointer' }}
+                    >
+                      Hide description
+                    </button>
+                  </div>
+                )}
+              </div>
+            </form>
+          </div>
+
+          {/* Filter & Counter Bar */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                className={`preset-chip ${taskFilter === 'all' ? 'active' : ''}`}
+                style={taskFilter === 'all' ? { borderColor: 'var(--accent-blue)', color: 'var(--accent-blue)' } : {}}
+                onClick={() => setTaskFilter('all')}
+              >
+                All ({tasks.length})
+              </button>
+              <button
+                type="button"
+                className={`preset-chip ${taskFilter === 'todo' ? 'active' : ''}`}
+                style={taskFilter === 'todo' ? { borderColor: 'var(--accent-blue)', color: 'var(--accent-blue)' } : {}}
+                onClick={() => setTaskFilter('todo')}
+              >
+                To Do ({todoCount})
+              </button>
+              <button
+                type="button"
+                className={`preset-chip ${taskFilter === 'in-progress' ? 'active' : ''}`}
+                style={taskFilter === 'in-progress' ? { borderColor: '#d29922', color: '#d29922' } : {}}
+                onClick={() => setTaskFilter('in-progress')}
+              >
+                In Progress ({inProgressCount})
+              </button>
+              <button
+                type="button"
+                className={`preset-chip ${taskFilter === 'done' ? 'active' : ''}`}
+                style={taskFilter === 'done' ? { borderColor: 'var(--accent-green)', color: 'var(--accent-green)' } : {}}
+                onClick={() => setTaskFilter('done')}
+              >
+                Done ({doneCount})
+              </button>
+              {blockedCount > 0 && (
+                <button
+                  type="button"
+                  className={`preset-chip ${taskFilter === 'blocked' ? 'active' : ''}`}
+                  style={taskFilter === 'blocked' ? { borderColor: 'var(--accent-red)', color: 'var(--accent-red)' } : {}}
+                  onClick={() => setTaskFilter('blocked')}
+                >
+                  Blocked ({blockedCount})
+                </button>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              {doneCount > 0 && (
+                <button
+                  type="button"
+                  className="btn btn-reset"
+                  style={{ fontSize: '0.72rem', padding: '4px 10px' }}
+                  onClick={handleClearCompleted}
+                  title="Clear all done tasks"
+                >
+                  <TrashIcon /> Clear Done ({doneCount})
+                </button>
+              )}
+              {tasks.length > 0 && (
+                <button
+                  type="button"
+                  className="btn btn-reset"
+                  style={{ fontSize: '0.72rem', padding: '4px 10px', color: 'var(--accent-red)', borderColor: 'rgba(248, 81, 73, 0.3)' }}
+                  onClick={() => {
+                    if (window.confirm('Are you sure you want to delete all tasks?')) {
+                      saveTasks([])
+                    }
+                  }}
+                  title="Delete all tasks"
+                >
+                  <TrashIcon /> Delete All
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Task List */}
+          {filteredTasks.length === 0 ? (
+            <div className="empty-state-box">
+              <CheckSquareIcon />
+              <p style={{ marginTop: '6px', fontSize: '0.88rem' }}>No tasks found in this category.</p>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '4px' }}>Type a task above and click "Add Task" to get started.</p>
+            </div>
+          ) : (
+            <div>
+              {filteredTasks.map(t => {
+                const isDone = t.status === 'done' || t.completed
+                const currentStatus = t.status || (t.completed ? 'done' : 'todo')
+
+                return (
+                  <div key={t.id} className={`task-item ${isDone ? 'completed' : ''}`}>
+                    <div className="task-item-header">
+                      <button
+                        type="button"
+                        className={`task-checkbox-btn ${isDone ? 'checked' : ''}`}
+                        onClick={() => handleToggleTask(t.id)}
+                        title={isDone ? 'Mark as incomplete' : 'Mark as complete'}
+                      >
+                        {isDone ? <CheckSquareIcon /> : <SquareIcon />}
+                      </button>
+
+                      <span className="task-text">{t.text}</span>
+
+                      <div className="task-meta">
+                        {/* Status Selector */}
+                        <select
+                          className={`status-select ${currentStatus}`}
+                          value={currentStatus}
+                          onChange={(e) => handleStatusChange(t.id, e.target.value)}
+                          title="Change task status"
+                        >
+                          <option value="todo">🔵 To Do</option>
+                          <option value="in-progress">🟡 In Progress</option>
+                          <option value="done">🟢 Done</option>
+                          <option value="blocked">🔴 Blocked</option>
+                        </select>
+
+                        <span className={`priority-badge ${t.priority}`}>
+                          {t.priority}
+                        </span>
+
+                        <span className="category-badge">
+                          {t.category}
+                        </span>
+
+                        <button
+                          type="button"
+                          className="btn-task-delete"
+                          onClick={() => handleDeleteTask(t.id)}
+                          title="Delete this task"
+                        >
+                          <TrashIcon />
+                          <span>Delete</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Task Description (if present) */}
+                    {t.description && (
+                      <div className="task-desc">
+                        {t.description}
+                      </div>
+                    )}
+
+                    {/* Task Date and Status Details */}
+                    <div className="task-item-footer">
+                      <span className="task-date-badge">
+                        <CalendarIcon /> Created: {formatTaskDate(t.createdAt)}
+                      </span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── TAB 2: SCRATCHPAD & NOTES ── */}
+      {tab === 'notes' && (
+        <div>
+          {editingNote ? (
+            /* Note Editor Form */
+            <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', padding: '20px', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <span style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <EditIcon />
+                  {editingNote.id ? 'Edit Note' : 'Create New Note'}
+                </span>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {editingNote.id && (
+                    <button
+                      type="button"
+                      className="btn btn-reset"
+                      style={{ color: 'var(--accent-red)', borderColor: 'rgba(248, 81, 73, 0.3)' }}
+                      onClick={() => handleDeleteNote(editingNote.id)}
+                    >
+                      <TrashIcon /> Delete
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="btn btn-reset"
+                    onClick={() => setEditingNote(null)}
+                  >Cancel</button>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={handleSaveNote}
+                  >
+                    <CheckIcon /> Save Note
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                <div>
+                  <label className="field-label" htmlFor="noteTitleInput">Note Title</label>
+                  <input
+                    id="noteTitleInput"
+                    type="text"
+                    className="input"
+                    value={editingNote.title}
+                    onChange={(e) => setEditingNote({ ...editingNote, title: e.target.value })}
+                    placeholder="e.g. Staging Secret Key, SQL Snippet, Deployment Checklist..."
+                    autoFocus
+                  />
+                </div>
+                <div>
+                  <label className="field-label" htmlFor="noteTagInput">Tag / Category</label>
+                  <input
+                    id="noteTagInput"
+                    type="text"
+                    className="input"
+                    value={editingNote.tag || ''}
+                    onChange={(e) => setEditingNote({ ...editingNote, tag: e.target.value })}
+                    placeholder="e.g. Deploy, Database, API"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="field-label" htmlFor="noteContentInput">Note Content / Snippet</label>
+                <textarea
+                  id="noteContentInput"
+                  className="textarea"
+                  style={{ minHeight: '260px', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.84rem' }}
+                  value={editingNote.content}
+                  onChange={(e) => setEditingNote({ ...editingNote, content: e.target.value })}
+                  placeholder="Paste code snippets, .env variables, SQL queries, or confidential memos here..."
+                  spellCheck="false"
+                />
+              </div>
+            </div>
+          ) : (
+            /* Notes Grid List */
+            <div>
+              {/* Search and Add Button */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' }}>
+                <div style={{ position: 'relative', flex: '1 1 240px' }}>
+                  <input
+                    type="text"
+                    className="input"
+                    style={{ paddingLeft: '34px' }}
+                    placeholder="Search notes by title, tag, or content..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                  <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}>
+                    <SearchIcon />
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => setEditingNote({ title: '', tag: 'General', content: '' })}
+                >
+                  <PlusIcon /> New Note
+                </button>
+              </div>
+
+              {filteredNotes.length === 0 ? (
+                <div className="empty-state-box">
+                  <StickyNoteIcon />
+                  <p style={{ marginTop: '6px', fontSize: '0.88rem' }}>
+                    {searchQuery ? 'No notes matched your search query.' : 'No secure notes saved yet.'}
+                  </p>
+                  {!searchQuery && (
+                    <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '4px' }}>Click "New Note" to save your secret keys, SQL queries, or personal memos.</p>
+                  )}
+                </div>
+              ) : (
+                <div className="notes-grid">
+                  {filteredNotes.map(n => (
+                    <div
+                      key={n.id}
+                      className="note-card"
+                      onClick={() => setEditingNote(n)}
+                    >
+                      <div>
+                        <div className="note-card-header">
+                          <span className="note-title">{n.title}</span>
+                          {n.tag && <span className="category-badge">{n.tag}</span>}
+                        </div>
+                        <div className="note-preview">
+                          {n.content}
+                        </div>
+                      </div>
+
+                      <div className="note-footer" onClick={(e) => e.stopPropagation()}>
+                        <span>{new Date(n.updatedAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <button
+                            type="button"
+                            className={`btn-icon-copy ${copiedNoteId === n.id ? 'copied' : ''}`}
+                            onClick={() => handleCopyNote(n.content, n.id)}
+                            title="Copy note content"
+                          >
+                            {copiedNoteId === n.id ? <CheckIcon /> : <CopyIcon />}
+                            {copiedNoteId === n.id ? 'Copied!' : 'Copy'}
+                          </button>
+                          <button
+                            type="button"
+                            className="btn-task-delete"
+                            onClick={() => handleDeleteNote(n.id)}
+                            title="Delete Note"
+                          >
+                            <TrashIcon />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── MODAL 1: CHANGE PIN ── */}
+      {showSettingsModal && (
+        <div className="modal-backdrop">
+          <div className="modal-card">
+            <div className="modal-header">
+              <span className="modal-title"><KeyIcon /> Change Access Code</span>
+              <button type="button" className="btn-task-delete" onClick={() => setShowSettingsModal(false)}>✕</button>
+            </div>
+
+            <div style={{ marginBottom: '14px' }}>
+              <label className="field-label" htmlFor="oldPin">Current Access Code</label>
+              <input
+                id="oldPin"
+                type="password"
+                className="input"
+                value={oldPin}
+                onChange={(e) => setOldPin(e.target.value)}
+                placeholder="Enter current code..."
+                autoFocus
+              />
+            </div>
+
+            <div style={{ marginBottom: '14px' }}>
+              <label className="field-label" htmlFor="newPin">New Access Code (min. 4 characters)</label>
+              <input
+                id="newPin"
+                type="password"
+                className="input"
+                value={newPin}
+                onChange={(e) => setNewPin(e.target.value)}
+                placeholder="Enter new code..."
+              />
+            </div>
+
+            <div style={{ marginBottom: '14px' }}>
+              <label className="field-label" htmlFor="confirmNewPin">Confirm New Access Code</label>
+              <input
+                id="confirmNewPin"
+                type="password"
+                className="input"
+                value={confirmNewPin}
+                onChange={(e) => setConfirmNewPin(e.target.value)}
+                placeholder="Re-enter new code..."
+              />
+            </div>
+
+            {pinChangeError && (
+              <div style={{ padding: '8px 12px', background: 'rgba(248, 81, 73, 0.15)', border: '1px solid rgba(248, 81, 73, 0.4)', borderRadius: 'var(--radius-sm)', color: 'var(--accent-red)', fontSize: '0.8rem', marginBottom: '14px' }}>
+                {pinChangeError}
+              </div>
+            )}
+
+            {pinChangeSuccess && (
+              <div style={{ padding: '8px 12px', background: 'rgba(63, 185, 80, 0.15)', border: '1px solid rgba(63, 185, 80, 0.4)', borderRadius: 'var(--radius-sm)', color: 'var(--accent-green)', fontSize: '0.8rem', marginBottom: '14px' }}>
+                {pinChangeSuccess}
+              </div>
+            )}
+
+            <div className="modal-actions">
+              <button type="button" className="btn btn-reset" onClick={() => setShowSettingsModal(false)}>Cancel</button>
+              <button type="button" className="btn btn-primary" onClick={handleChangePin}>
+                Save New Access Code
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL 2: BACKUP & RESTORE ── */}
+      {showExportModal && (
+        <div className="modal-backdrop">
+          <div className="modal-card" style={{ maxWidth: '520px' }}>
+            <div className="modal-header">
+              <span className="modal-title"><DownloadIcon /> Backup & Restore Data</span>
+              <button type="button" className="btn-task-delete" onClick={() => setShowExportModal(false)}>✕</button>
+            </div>
+
+            <div style={{ marginBottom: '16px' }}>
+              <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '10px' }}>
+                Download all your task and note data as a JSON file to keep it safe or transfer it to another computer.
+              </p>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button type="button" className="btn btn-primary" onClick={handleExportJson} style={{ fontSize: '0.82rem' }}>
+                  <DownloadIcon /> Download Backup JSON File
+                </button>
+                <button type="button" className="btn btn-reset" onClick={handleCopyExportJson} style={{ fontSize: '0.82rem' }}>
+                  {copiedExport ? <CheckIcon /> : <CopyIcon />} {copiedExport ? 'Copied!' : 'Copy JSON'}
+                </button>
+              </div>
+            </div>
+
+            <div className="section-divider" style={{ margin: '16px 0' }} />
+
+            <div>
+              <label className="field-label">Restore Data from JSON</label>
+              <textarea
+                className="textarea"
+                style={{ minHeight: '110px', fontSize: '0.78rem', fontFamily: 'JetBrains Mono, monospace', marginBottom: '10px' }}
+                placeholder='Paste backup JSON content here {"version":"1.0","tasks":[...],"notes":[...]}'
+                value={importJson}
+                onChange={(e) => setImportJson(e.target.value)}
+              />
+
+              {importError && (
+                <div style={{ padding: '8px 12px', background: 'rgba(248, 81, 73, 0.15)', border: '1px solid rgba(248, 81, 73, 0.4)', borderRadius: 'var(--radius-sm)', color: 'var(--accent-red)', fontSize: '0.8rem', marginBottom: '10px' }}>
+                  {importError}
+                </div>
+              )}
+
+              {importSuccess && (
+                <div style={{ padding: '8px 12px', background: 'rgba(63, 185, 80, 0.15)', border: '1px solid rgba(63, 185, 80, 0.4)', borderRadius: 'var(--radius-sm)', color: 'var(--accent-green)', fontSize: '0.8rem', marginBottom: '10px' }}>
+                  {importSuccess}
+                </div>
+              )}
+
+              <button
+                type="button"
+                className="btn btn-reset"
+                style={{ width: '100%' }}
+                onClick={handleImportJson}
+                disabled={!importJson.trim()}
+              >
+                <UploadIcon /> Import JSON Data
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+        function App() {
       const [activeTool, setActiveTool] = useState('gitlab-mr');
       const [sidebarOpen, setSidebarOpen] = useState(false);
       const [form, setForm] = useState(INITIAL_STATE);
@@ -1078,6 +2454,17 @@
                     <span className="nav-badge" style={{ background: 'rgba(56, 139, 253, 0.15)', color: 'var(--accent-blue)' }}>New</span>
                   </button>
                 </li>
+                <li>
+                  <button
+                    type="button"
+                    className={`nav-item-btn ${activeTool === 'secure-notes' ? 'active' : ''}`}
+                    onClick={() => { setActiveTool('secure-notes'); setSidebarOpen(false); }}
+                  >
+                    <span className="nav-icon"><ShieldCheckIcon /></span>
+                    Secure Notes & Tasks
+                    <span className="nav-badge" style={{ background: 'rgba(210, 153, 34, 0.15)', color: '#d29922' }}>Protected</span>
+                  </button>
+                </li>
               </ul>
             </nav>
             <div className="sidebar-footer">GG AI &copy; {new Date().getFullYear()}</div>
@@ -1095,20 +2482,26 @@
                     style={
                       activeTool === 'hash-gen'
                         ? { background: 'linear-gradient(135deg, #388bfd, #1f6beb)', boxShadow: '0 2px 8px rgba(56, 139, 253, 0.35)' }
+                        : activeTool === 'secure-notes'
+                        ? { background: 'linear-gradient(135deg, #d29922, #9e6a03)', boxShadow: '0 2px 8px rgba(210, 153, 34, 0.35)' }
                         : {}
                     }
                   >
-                    {activeTool === 'hash-gen' ? <HashIcon /> : <GitLabIcon />}
+                    {activeTool === 'hash-gen' ? <HashIcon /> : activeTool === 'secure-notes' ? <ShieldCheckIcon /> : <GitLabIcon />}
                   </div>
                   <div className="header-text">
                     <h1>
                       {activeTool === 'hash-gen'
                         ? 'Hash:: Generator'
+                        : activeTool === 'secure-notes'
+                        ? 'Secure Dev Notes & Tasks'
                         : 'MR Description Generator'}
                     </h1>
                     <p>
                       {activeTool === 'hash-gen'
                         ? 'Generate Laravel Hash::make() compatible Bcrypt ($2y$) and Argon2id ($argon2id$) password hashes'
+                        : activeTool === 'secure-notes'
+                        ? 'Protected personal dev scratchpad & to-do tasks with access code lock'
                         : 'Generate GitLab Merge Request descriptions instantly'}
                     </p>
                   </div>
@@ -1196,8 +2589,10 @@
                     </div>
                   </section>
                 </div>
-              ) : (
+              ) : activeTool === 'hash-gen' ? (
                 <HashGeneratorTool />
+              ) : (
+                <SecureNotesTool />
               )}
             </main>
           </div>
