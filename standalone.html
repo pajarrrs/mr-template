@@ -618,7 +618,7 @@
     }
 
     const DEFAULTS = {
-      threadLink: 'No Thread Link specified',
+      threadLink: 'No Project Link specified',
       deploymentSteps: 'No deployment steps specified',
       tablesToBackup: 'No tables to backup specified',
     };
@@ -634,7 +634,7 @@
       const threadLinkValue = threadLink.trim() ? `* ${threadLink.trim()}` : `* ${DEFAULTS.threadLink}`;
 
       return [
-        'Nyra Thread Link',
+        'Nyra Project Link',
         '',
         threadLinkValue,
         '',
@@ -2521,7 +2521,7 @@ function SecureNotesTool() {
                       <div className="field-group">
                         <label className="field-label" htmlFor="threadLink">
                           <span className="field-label-icon"><LinkIcon /></span>
-                          Nyra Thread Link
+                          Nyra Project Link
                           <span className="field-optional">optional</span>
                         </label>
                         <input

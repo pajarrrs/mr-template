@@ -336,7 +336,7 @@ function analyzeHashString(hashStr) {
 // ─── Defaults & Markdown Generator for MR ──────────────────────────────────
 
 const DEFAULTS = {
-  threadLink: 'No Thread Link specified',
+  threadLink: 'No Project Link specified',
   deploymentSteps: 'No deployment steps specified',
   tablesToBackup: 'No tables to backup specified',
 }
@@ -357,7 +357,7 @@ function generateMarkdown({ threadLink, deploymentSteps, tablesToBackup }) {
   const tablesValue = formatBullets(tablesToBackup, DEFAULTS.tablesToBackup)
 
   return [
-    'Nyra Thread Link',
+    'Nyra Project Link',
     '',
     threadLinkValue,
     '',
@@ -2486,11 +2486,11 @@ export default function App() {
                 </div>
 
                 <div className="panel-body">
-                  {/* Thread Link */}
+                  {/* Project Link */}
                   <div className="field-group">
                     <label className="field-label" htmlFor="threadLink">
                       <span className="field-label-icon"><LinkIcon /></span>
-                      Nyra Thread Link
+                      Nyra Project Link
                       <span className="field-optional">optional</span>
                     </label>
                     <input
