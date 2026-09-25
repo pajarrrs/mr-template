@@ -251,8 +251,16 @@
     .ai-avatar-badge { width: 36px; height: 36px; border-radius: var(--radius-sm); background: linear-gradient(135deg, #388bfd, #1f6beb); color: #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(56, 139, 253, 0.35); }
     .ai-avatar-badge svg { width: 18px; height: 18px; }
     .ai-header-left h3 { font-size: 0.96rem; font-weight: 700; color: var(--text-primary); }
-    .ai-model-status { font-size: 0.72rem; color: var(--text-secondary); }
-    .ai-header-actions { display: flex; align-items: center; gap: 8px; }
+    .ai-header-actions { display: flex; align-items: center; gap: 12px; }
+    .ai-quota-widget { display: flex; flex-direction: column; gap: 5px; min-width: 185px; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-default); padding: 6px 12px; border-radius: var(--radius-md); transition: all var(--transition); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2); }
+    .ai-quota-widget:hover { border-color: rgba(56, 139, 253, 0.4); background: rgba(56, 139, 253, 0.05); }
+    .ai-quota-info { display: flex; justify-content: space-between; align-items: center; font-size: 0.72rem; font-weight: 600; gap: 8px; }
+    .ai-quota-label { color: var(--text-secondary); font-size: 0.7rem; }
+    .ai-quota-value { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; font-weight: 700; }
+    .ai-quota-track { width: 100%; height: 6px; background: var(--bg-tertiary); border-radius: 999px; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.06); }
+    .ai-quota-bar { height: 100%; border-radius: 999px; transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
+    .ai-quota-reset-text { font-size: 0.65rem; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center; margin-top: 1px; }
+    .ai-quota-reset-text strong { color: var(--text-secondary); font-weight: 600; }
     .ai-btn-action { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: var(--radius-sm); background: var(--bg-tertiary); border: 1px solid var(--border-default); color: var(--text-secondary); font-size: 0.78rem; font-weight: 500; cursor: pointer; transition: all var(--transition); }
     .ai-btn-action svg { width: 14px; height: 14px; }
     .ai-btn-action:hover { background: var(--bg-hover); color: var(--text-primary); border-color: #484f58; }
@@ -276,21 +284,42 @@
     .ai-message-header { display: flex; align-items: center; gap: 8px; font-size: 0.72rem; color: var(--text-muted); }
     .ai-message-sender-name { font-weight: 700; color: var(--text-secondary); }
     .ai-copy-msg-btn { margin-left: auto; background: transparent; border: none; color: var(--text-muted); cursor: pointer; padding: 2px; border-radius: 4px; }
-    .ai-copy-msg-btn:hover { color: var(--text-primary); }
-    .ai-copy-msg-btn svg { width: 13px; height: 13px; }
-    .ai-message-content { color: var(--text-primary); font-size: 0.86rem; line-height: 1.6; }
-    .markdown-body-render { font-family: inherit; white-space: pre-wrap; word-break: break-word; margin: 0; }
+    .ai-message-content { color: var(--text-primary); font-size: 0.88rem; line-height: 1.65; word-break: break-word; }
+    .ai-message-content strong { color: #ffffff; font-weight: 700; }
+    .ai-message-content em { color: #e6edf3; font-style: italic; }
+    .ai-message-content .markdown-h2 { font-size: 1.15rem; font-weight: 700; color: #58a6ff; margin: 12px 0 6px; }
+    .ai-message-content .markdown-h3 { font-size: 1.05rem; font-weight: 700; color: #58a6ff; margin: 10px 0 4px; }
+    .ai-message-content .markdown-h4 { font-size: 0.95rem; font-weight: 700; color: #e6edf3; margin: 8px 0 4px; }
+    .ai-message-content .markdown-h5 { font-size: 0.88rem; font-weight: 700; color: #8b949e; margin: 6px 0 2px; }
+    .ai-message-content .markdown-p { margin-bottom: 8px; line-height: 1.65; color: var(--text-primary); }
+    .ai-message-content .markdown-p:last-child { margin-bottom: 0; }
+    .ai-message-content .markdown-ul, .ai-message-content .markdown-ol { padding-left: 20px; margin: 6px 0 10px; display: flex; flex-direction: column; gap: 4px; }
+    .ai-message-content li { line-height: 1.6; color: var(--text-primary); }
+    .ai-message-content .markdown-hr { border: none; border-top: 1px solid var(--border-default); margin: 14px 0; }
+    .ai-message-content .markdown-blockquote { border-left: 3px solid var(--accent-blue); padding: 6px 12px; margin: 8px 0; color: var(--text-secondary); font-style: italic; background: rgba(56, 139, 253, 0.05); border-radius: 0 4px 4px 0; }
+    .ai-message-content .inline-code { background: rgba(110, 118, 129, 0.25); color: #ff7b72; padding: 2px 6px; border-radius: 4px; font-family: 'JetBrains Mono', monospace; font-size: 0.82em; border: 1px solid rgba(110, 118, 129, 0.3); }
+    .code-block-wrapper { background: #0d1117; border: 1px solid var(--border-default); border-radius: var(--radius-sm); margin: 10px 0; overflow: hidden; }
+    .code-block-header { display: flex; justify-content: space-between; align-items: center; padding: 6px 12px; background: rgba(255, 255, 255, 0.03); border-bottom: 1px solid var(--border-muted); font-size: 0.72rem; color: var(--text-secondary); font-family: 'JetBrains Mono', monospace; text-transform: uppercase; }
+    .code-block-content { padding: 12px 14px; overflow-x: auto; font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; line-height: 1.5; color: #e6edf3; margin: 0; background: transparent; }
+    .table-responsive { width: 100%; overflow-x: auto; margin: 10px 0; }
+    .markdown-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    .markdown-table th { background: var(--bg-tertiary); border: 1px solid var(--border-default); padding: 6px 10px; text-align: left; font-weight: 600; color: #58a6ff; }
+    .markdown-table td { border: 1px solid var(--border-default); padding: 6px 10px; color: var(--text-primary); }
 
     .ai-typing-indicator { display: flex; gap: 4px; }
     .ai-typing-indicator span { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-blue); animation: typingBounce 1.4s infinite ease-in-out both; }
     .ai-typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
     .ai-typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
     @keyframes typingBounce { 0%, 80%, 100% { transform: scale(0); opacity: 0.4; } 40% { transform: scale(1); opacity: 1; } }
-    .typing-text { font-size: 0.78rem; color: var(--text-secondary); font-style: italic; }
+    .ai-preset-chip:disabled { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
+    .ai-limit-banner { display: flex; align-items: flex-start; gap: 12px; background: rgba(248, 81, 73, 0.12); border: 1px solid rgba(248, 81, 73, 0.35); border-radius: var(--radius-sm); padding: 10px 14px; margin: 0 18px 12px; color: #ff7b72; font-size: 0.8rem; line-height: 1.45; }
+    .ai-limit-banner-title { display: block; font-size: 0.85rem; font-weight: 700; color: #f85149; margin-bottom: 2px; }
+    .ai-limit-icon { font-size: 1.1rem; line-height: 1; flex-shrink: 0; margin-top: 1px; }
 
     .ai-chat-input-wrapper { display: flex; align-items: flex-end; gap: 10px; padding: 14px 18px; background: var(--bg-secondary); border-top: 1px solid var(--border-default); }
     .ai-textarea { flex: 1; background: var(--bg-input); border: 1px solid var(--border-default); border-radius: var(--radius-sm); color: var(--text-primary); font-family: inherit; font-size: 0.85rem; padding: 10px 12px; outline: none; resize: none; line-height: 1.5; max-height: 140px; }
     .ai-textarea:focus { border-color: var(--accent-blue); box-shadow: 0 0 0 2px rgba(56, 139, 253, 0.15); }
+    .ai-textarea:disabled { background: var(--bg-tertiary); color: var(--text-muted); cursor: not-allowed; opacity: 0.7; }
     .ai-send-btn { background: linear-gradient(135deg, #388bfd, #1f6beb); color: #fff; border: none; border-radius: var(--radius-sm); width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all var(--transition); flex-shrink: 0; }
     .ai-send-btn:hover:not(:disabled) { box-shadow: 0 2px 10px rgba(56, 139, 253, 0.4); transform: translateY(-1px); }
     .ai-send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -1117,428 +1146,207 @@
       );
     }
 
+    // ─── Universal AI Assistant Component (OpenRouter Free) ──────────────────
+
+    const DEFAULT_OPENROUTER_KEY = atob('c2stb3ItdjEtNjE5ZTdjZDg4NmQyNjllZWMwN2NjMWEzNGY4NzQyY2JhYThmNzYyMzEwZjM3MTJmMzMxNDY5MDNlMzFkMzQ2NA==');
+    const FREE_MODEL = 'openrouter/free';
+
     const AI_PRESETS = [
       {
-        title: 'Conventional Commit',
-        prompt: 'Bantu buatkan Conventional Commit message yang rapi dan deskriptif dari perubahan kode berikut:\n\n',
+        title: 'Ronaldo vs Messi',
+        prompt: 'Bandingkan Cristiano Ronaldo dan Lionel Messi secara objektif dari segi statistik karir, gaya bermain, dan pencapaian trofi.',
       },
       {
-        title: 'Refactor Clean Code',
-        prompt: 'Tolong review dan refactor potongan kode berikut agar lebih clean, mengikuti PSR-12/ES6+, dan bebas bad smells:\n\n',
+        title: 'Ide & Brainstorming',
+        prompt: 'Berikan 5 ide terstruktur dan realistis untuk: ',
       },
       {
-        title: 'Laravel Migration Generator',
-        prompt: 'Ubah definisi kolom database atau SQL CREATE TABLE berikut menjadi Laravel Schema Migration ($table->...):\n\n',
+        title: 'Buat Email / Surat',
+        prompt: 'Tuliskan draft email formal yang jelas dan profesional untuk: ',
       },
       {
-        title: 'Generate Unit Test',
-        prompt: 'Buatkan unit test lengkap (happy path & edge cases) menggunakan PHPUnit / Pest untuk fungsi berikut:\n\n',
+        title: 'Rangkum & Analisis',
+        prompt: 'Tolong rangkum poin-poin utama dan insight penting dari topik ini:\n\n',
       },
       {
-        title: 'SQL Index & Performance',
-        prompt: 'Analisis query SQL berikut dan beri saran indexing atau pencegahan N+1 query problem:\n\n',
+        title: 'Coding & Refactor',
+        prompt: 'Review dan bantu buatkan kode clean best practice untuk:\n\n',
+      },
+      {
+        title: 'Bedah Error / Debug',
+        prompt: 'Analisis akar masalah dan solusi langkah demi langkah untuk error ini:\n\n',
       },
     ];
 
-    // ─── Smart Developer Knowledge & Architecture Engine ──────────────────────────
+    function formatInlineMarkdown(text) {
+      if (!text) return '';
+      return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>')
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/__(.*?)__/g, '<strong>$1</strong>')
+        .replace(/(?<!\*)\*(?!\*)(.*?)(?<!\*)\*(?!\*)/g, '<em>$1</em>')
+        .replace(/(?<!_)_(?!_)(.*?)(?<!_)_(?!_)/g, '<em>$1</em>')
+        .replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>');
+    }
 
-    function generateSmartDevResponse(userQuery) {
-      const query = userQuery.trim();
-      const lower = query.toLowerCase();
+    function parseMarkdownToHtml(markdown) {
+      if (!markdown) return '';
 
-      // 1. Conventional Commit & Git Branch Generator
-      if (
-        lower.includes('commit') ||
-        lower.includes('conventional') ||
-        lower.includes('git diff') ||
-        lower.includes('branch') ||
-        lower.includes('merge request') ||
-        lower.includes('mr')
-      ) {
-        let type = 'feat';
-        let scope = 'core';
-        let title = 'implement developer improvements and feature updates';
+      const codeBlocks = [];
+      let text = markdown.replace(/```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g, (_, lang, code) => {
+        const placeholder = `__CODE_BLOCK_${codeBlocks.length}__`;
+        const escapedCode = code
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .trim();
+        codeBlocks.push(
+          `<div class="code-block-wrapper"><div class="code-block-header"><span>${lang || 'code'}</span></div><pre class="code-block-content"><code>${escapedCode}</code></pre></div>`
+        );
+        return placeholder;
+      });
 
-        if (lower.includes('fix') || lower.includes('bug') || lower.includes('error') || lower.includes('patch')) {
-          type = 'fix';
-          scope = lower.includes('auth') ? 'auth' : lower.includes('order') ? 'order' : lower.includes('ui') ? 'ui' : 'handler';
-          title = 'prevent unexpected exception and handle edge cases';
-        } else if (lower.includes('refactor') || lower.includes('clean') || lower.includes('reorganize')) {
-          type = 'refactor';
-          scope = lower.includes('service') ? 'service' : lower.includes('model') ? 'model' : 'core';
-          title = 'streamline logic and apply early return guard clauses';
-        } else if (lower.includes('perf') || lower.includes('optim') || lower.includes('index') || lower.includes('n+1')) {
-          type = 'perf';
-          scope = 'query';
-          title = 'optimize database queries and eager load relations';
-        } else if (lower.includes('test') || lower.includes('pest') || lower.includes('phpunit')) {
-          type = 'test';
-          scope = 'unit';
-          title = 'add comprehensive test suite for happy path and edge cases';
-        } else if (lower.includes('auth') || lower.includes('login') || lower.includes('jwt') || lower.includes('token')) {
-          type = 'feat';
-          scope = 'auth';
-          title = 'implement secure session validation and permission guard';
-        } else if (lower.includes('payment') || lower.includes('order') || lower.includes('checkout') || lower.includes('sholat')) {
-          type = 'feat';
-          scope = lower.includes('sholat') ? 'sholat' : 'order';
-          title = lower.includes('sholat') ? 'integrate live prayer schedule with countdown timer' : 'implement checkout calculation with voucher validation';
+      const lines = text.split('\n');
+      const htmlLines = [];
+      let inList = false;
+      let listType = null;
+      let inTable = false;
+      let tableRows = [];
+
+      const closeList = () => {
+        if (inList) {
+          htmlLines.push(`</${listType}>`);
+          inList = false;
+          listType = null;
+        }
+      };
+
+      const closeTable = () => {
+        if (inTable) {
+          if (tableRows.length > 0) {
+            let tableHtml = '<div class="table-responsive"><table class="markdown-table">';
+            tableRows.forEach((row, rIdx) => {
+              const cells = row.split('|').slice(1, -1).map((c) => c.trim());
+              if (rIdx === 0) {
+                tableHtml += '<thead><tr>' + cells.map((c) => `<th>${formatInlineMarkdown(c)}</th>`).join('') + '</tr></thead><tbody>';
+              } else if (rIdx === 1 && cells.every((c) => /^:?-+:?$/.test(c))) {
+                // separator row
+              } else {
+                tableHtml += '<tr>' + cells.map((c) => `<td>${formatInlineMarkdown(c)}</td>`).join('') + '</tr>';
+              }
+            });
+            tableHtml += '</tbody></table></div>';
+            htmlLines.push(tableHtml);
+          }
+          inTable = false;
+          tableRows = [];
+        }
+      };
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const trimmed = line.trim();
+
+        if (!trimmed) {
+          closeList();
+          closeTable();
+          continue;
         }
 
-        return `### 💡 Rekomendasi Conventional Commit & Git Workflow
-
-Berdasarkan analisis kebutuhan kode Anda:
-
-#### 1. Format Pesan Commit (Disarankan)
-\`\`\`bash
-# Pilihan 1: Standar & Deskriptif
-${type}(${scope}): ${title}
-
-# Pilihan 2: Lengkap dengan Body & Footer
-${type}(${scope}): ${title}
-
-- Validasi input payload dan handle defensive null checks.
-- Terapkan atomic database transaction untuk multi-write flow.
-- Tambahkan logging kontekstual via Sentry saat terjadi failure.
-
-Closes #SNJ-${Math.floor(Math.random() * 800 + 1000)}
-\`\`\`
-
-#### 2. Rekomendasi Nama Branch (GitLab / GitHub)
-\`\`\`bash
-# Fitur baru
-git checkout -b ${type === 'fix' ? 'fix' : 'feat'}/SNJ-${Math.floor(Math.random() * 800 + 1000)}-${scope}-${type === 'fix' ? 'patch' : 'enhancement'}
-\`\`\`
-
-#### 3. Command Eksekusi Git
-\`\`\`bash
-git add .
-git commit -m "${type}(${scope}): ${title}"
-git push origin HEAD
-\`\`\`
-
-> 📌 **Panduan Type**: \`feat\` (fitur baru), \`fix\` (perbaikan bug), \`refactor\` (bersih-bersih tanpa ubah fungsi), \`perf\` (optimasi performa), \`test\` (unit test).`;
-      }
-
-      // 2. Laravel Migration & Schema Architecture
-      if (lower.includes('migration') || lower.includes('schema') || (lower.includes('table') && lower.includes('laravel'))) {
-        return `### 🗄️ Laravel Schema Migration Template (Best Practices)
-
-Berikut struktur migration yang sudah menerapkan **BigInteger IDR (Anti-Rounding)**, **Composite Indexing**, dan **Foreign Key Constraints**:
-
-\`\`\`php
-<?php
-
-use Illuminate\\Database\\Migrations\\Migration;
-use Illuminate\\Database\\Schema\\Blueprint;
-use Illuminate\\Support\\Facades\\Schema;
-
-return new class extends Migration
-{
-    /**
-     * Run the migrations.
-     */
-    public function up(): void
-    {
-        Schema::create('orders', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->string('order_number', 64)->unique();
-            
-            // Financial Math: Selalu integer rupiah (tanpa float)
-            $table->bigInteger('subtotal')->default(0);
-            $table->bigInteger('discount_amount')->default(0);
-            $table->bigInteger('delivery_fee')->default(0);
-            $table->bigInteger('total_amount')->default(0);
-            
-            $table->string('status', 30)->default('pending')->index();
-            $table->json('payment_metadata')->nullable();
-            $table->softDeletes();
-            $table->timestamps();
-
-            // Composite Index untuk filtering cepat di dashboard / reporting
-            $table->index(['user_id', 'status', 'created_at']);
-        });
-    }
-
-    /**
-     * Reverse the migrations.
-     */
-    public function down(): void
-    {
-        Schema::dropIfExists('orders');
-    }
-};
-\`\`\`
-
-#### 🛡️ Aturan Emas Database:
-1. **Mata Uang IDR**: Simpan dalam satuan integer penuh (contoh: \`Rp 150.000\` -> \`150000\`), hindari tipe \`FLOAT\` / \`DOUBLE\` agar tidak terjadi selisih koma desimal.
-2. **Foreign Key**: Selalu sertakan \`constrained()->cascadeOnDelete()\` atau \`nullOnDelete()\`.
-3. **Composite Index**: Buat index pada kolom yang sering digabung dalam klausa \`WHERE ... ORDER BY\`.`;
-      }
-
-      // 3. Unit Test (Pest / PHPUnit)
-      if (lower.includes('test') || lower.includes('pest') || lower.includes('phpunit')) {
-        return `### 🧪 Unit & Feature Test (Pest & PHPUnit)
-
-Berikut contoh test case komprehensif menguji **Happy Path**, **Edge Case**, dan **Exception Handling**:
-
-\`\`\`php
-<?php
-
-use App\\Models\\User;
-use App\\Models\\Cart;
-use App\\Services\\OrderService;
-use App\\Exceptions\\InsufficientStockException;
-use Illuminate\\Foundation\\Testing\\RefreshDatabase;
-
-uses(RefreshDatabase::class);
-
-describe('Order Creation Flow', function () {
-
-    it('successfully creates order with valid items and voucher discount', function () {
-        // 1. Arrange
-        $user = User::factory()->create();
-        $cart = Cart::factory()->withItems(2)->create(['user_id' => $user->id]);
-
-        // 2. Act
-        $service = app(OrderService::class);
-        $order = $service->createFromCart($user, $cart, voucherCode: 'HEMAT50');
-
-        // 3. Assert
-        expect($order)->not->toBeNull()
-            ->and($order->user_id)->toBe($user->id)
-            ->and($order->status)->toBe('pending')
-            ->and($order->total_amount)->toBe(125000);
-
-        $this->assertDatabaseHas('orders', [
-            'id' => $order->id,
-            'user_id' => $user->id,
-        ]);
-    });
-
-    it('throws InsufficientStockException when item stock is zero', function () {
-        $user = User::factory()->create();
-        $cart = Cart::factory()->withOutOfStockItem()->create();
-
-        $service = app(OrderService::class);
-
-        expect(fn () => $service->createFromCart($user, $cart))
-            ->toThrow(InsufficientStockException::class);
-    });
-
-});
-\`\`\`
-
-> 💡 **Command Menjalankan Test**:
-> \`\`\`bash
-> ./vendor/bin/pest --filter=OrderTest
-> # atau PHPUnit:
-> php artisan test --filter=OrderTest
-> \`\`\``;
-      }
-
-      // 4. SQL Performance & N+1 Query Optimizer
-      if (lower.includes('n+1') || lower.includes('query') || lower.includes('sql') || lower.includes('index') || lower.includes('database')) {
-        return `### ⚡ SQL & Query Performance Optimization Guide
-
-#### 1. Masalah N+1 Query (Sebelum vs Sesudah)
-
-❌ **Buruk (N+1 Queries - Sangat Lambat):**
-\`\`\`php
-// Menghasilkan 1 query order + N query user (100 order = 101 query!)
-$orders = Order::where('status', 'completed')->get();
-foreach ($orders as $order) {
-    echo $order->user->name; // Query dipanggil berulang kali di dalam loop
-}
-\`\`\`
-
-✅ **Solusi Optimal (Eager Loading - Hanya 2 Query):**
-\`\`\`php
-$orders = Order::with(['user:id,name,email', 'items.product:id,name,price'])
-    ->where('status', 'completed')
-    ->latest()
-    ->paginate(20);
-\`\`\`
-
----
-
-#### 2. Rekomendasi Database Indexing
-Jika Anda sering melakukan filtering dan sorting:
-\`\`\`sql
--- Analisis query dengan EXPLAIN
-EXPLAIN SELECT * FROM orders 
-WHERE user_id = 45 AND status = 'paid' 
-ORDER BY created_at DESC LIMIT 20;
-
--- Buat Composite Index untuk menembak query di atas langsung (Index Scan):
-CREATE INDEX idx_orders_user_status_created 
-ON orders (user_id, status, created_at);
-\`\`\`
-
----
-
-#### 3. Atomic Multi-Write Database Transaction
-\`\`\`php
-use Illuminate\\Support\\Facades\\DB;
-
-return DB::transaction(function () use ($user, $cartData) {
-    $order = Order::create([...]);
-    $order->items()->createMany([...]);
-    $user->decrement('wallet_balance', $order->total_amount);
-    
-    return $order;
-}, 3); // 3x automatic retry jika terjadi deadlock
-\`\`\``;
-      }
-
-      // 5. Clean Code & Refactoring (Guard Clauses)
-      if (lower.includes('refactor') || lower.includes('clean') || lower.includes('if') || lower.includes('smell')) {
-        return `### 🧼 Clean Code & Refactoring: Guard Clause Pattern
-
-Salah satu cara paling ampuh membuat kode rapi adalah **mengeliminasi nested \`if-else\`** dengan pola **Early Return (Guard Clauses)**.
-
-#### ❌ Sebelum Refactor (Arrow Anti-Pattern / Deep Nesting)
-\`\`\`php
-public function processPayment($user, $order, $amount)
-{
-    if ($user !== null) {
-        if ($user->isActive()) {
-            if ($order !== null) {
-                if ($order->status === 'pending') {
-                    if ($amount > 0 && $user->balance >= $amount) {
-                        // Business Logic utama terkubur 5 level di dalam!
-                        $order->update(['status' => 'paid']);
-                        return true;
-                    } else {
-                        throw new InvalidAmountException();
-                    }
-                } else {
-                    throw new OrderAlreadyProcessedException();
-                }
-            }
+        if (trimmed.startsWith('__CODE_BLOCK_') && trimmed.endsWith('__')) {
+          closeList();
+          closeTable();
+          htmlLines.push(trimmed);
+          continue;
         }
-    }
-    return false;
-}
-\`\`\`
 
-#### ✅ Sesudah Refactor (Clean, Flat, Readable & Testable)
-\`\`\`php
-public function processPayment(?User $user, ?Order $order, int $amount): bool
-{
-    // 1. Guard Clauses: Validasi awal dan langsung return/throw jika tidak valid
-    if (!$user?->isActive()) {
-        throw new UserInactiveException('User tidak aktif atau tidak ditemukan.');
-    }
+        if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
+          closeList();
+          inTable = true;
+          tableRows.push(trimmed);
+          continue;
+        } else {
+          closeTable();
+        }
 
-    if ($order?->status !== 'pending') {
-        throw new OrderAlreadyProcessedException('Order sudah diproses atau tidak valid.');
-    }
+        if (/^(\-{3,}|\*{3,}|_{3,})$/.test(trimmed)) {
+          closeList();
+          htmlLines.push('<hr class="markdown-hr" />');
+          continue;
+        }
 
-    if ($amount <= 0 || $user->balance < $amount) {
-        throw new InsufficientBalanceException('Saldo tidak mencukupi untuk transaksi ini.');
-    }
+        const h4Match = trimmed.match(/^####\s+(.+)$/);
+        if (h4Match) {
+          closeList();
+          htmlLines.push(`<h5 class="markdown-h5">${formatInlineMarkdown(h4Match[1])}</h5>`);
+          continue;
+        }
+        const h3Match = trimmed.match(/^###\s+(.+)$/);
+        if (h3Match) {
+          closeList();
+          htmlLines.push(`<h4 class="markdown-h4">${formatInlineMarkdown(h3Match[1])}</h4>`);
+          continue;
+        }
+        const h2Match = trimmed.match(/^##\s+(.+)$/);
+        if (h2Match) {
+          closeList();
+          htmlLines.push(`<h3 class="markdown-h3">${formatInlineMarkdown(h2Match[1])}</h3>`);
+          continue;
+        }
+        const h1Match = trimmed.match(/^#\s+(.+)$/);
+        if (h1Match) {
+          closeList();
+          htmlLines.push(`<h2 class="markdown-h2">${formatInlineMarkdown(h1Match[1])}</h2>`);
+          continue;
+        }
 
-    // 2. Happy Path: Terlihat jelas tanpa lekukan kode
-    return DB::transaction(function () use ($user, $order, $amount) {
-        $order->update(['status' => 'paid', 'paid_at' => now()]);
-        $user->decrement('balance', $amount);
-        return true;
-    });
-}
-\`\`\`
+        const bqMatch = trimmed.match(/^>\s*(.+)$/);
+        if (bqMatch) {
+          closeList();
+          htmlLines.push(`<blockquote class="markdown-blockquote">${formatInlineMarkdown(bqMatch[1])}</blockquote>`);
+          continue;
+        }
 
-> ✨ **Keuntungan**:
-> - Complexity Cyclomatic turun drastis.
-> - Setiap kondisi error tertangkap di baris paling atas.
-> - Happy path berada di level indentasi pertama.`;
+        const ulMatch = line.match(/^(\s*)([-*+])\s+(.+)$/);
+        if (ulMatch) {
+          if (!inList || listType !== 'ul') {
+            closeList();
+            htmlLines.push('<ul class="markdown-ul">');
+            inList = true;
+            listType = 'ul';
+          }
+          htmlLines.push(`<li>${formatInlineMarkdown(ulMatch[3])}</li>`);
+          continue;
+        }
+
+        const olMatch = line.match(/^(\s*)(\d+)\.\s+(.+)$/);
+        if (olMatch) {
+          if (!inList || listType !== 'ol') {
+            closeList();
+            htmlLines.push('<ol class="markdown-ol">');
+            inList = true;
+            listType = 'ol';
+          }
+          htmlLines.push(`<li>${formatInlineMarkdown(olMatch[3])}</li>`);
+          continue;
+        }
+
+        closeList();
+        htmlLines.push(`<p class="markdown-p">${formatInlineMarkdown(trimmed)}</p>`);
       }
 
-      // 6. Error & Debugging Solver
-      if (lower.includes('error') || lower.includes('exception') || lower.includes('failed') || lower.includes('500') || lower.includes('419') || lower.includes('cors')) {
-        return `### 🛠️ Diagnostic & Solusi Error
+      closeList();
+      closeTable();
 
-Berdasarkan pola error yang Anda hadapi:
+      let finalHtml = htmlLines.join('\n');
+      codeBlocks.forEach((cb, idx) => {
+        finalHtml = finalHtml.replace(`__CODE_BLOCK_${idx}__`, cb);
+      });
 
-#### 1. Error \`Call to a member function ... on null\`
-- **Penyebab**: Memanggil method/properti pada variabel yang bernilai \`null\` (contoh: relasi yang belum di-load atau data tidak ditemukan).
-- **Solusi**: Gunakan Nullsafe Operator (\`?->\`) atau null coalescing (\`??\`):
-  \`\`\`php
-  // Daripada:
-  $userName = $order->user->name; // Fatal error jika user null
-  
-  // Gunakan:
-  $userName = $order->user?->name ?? 'Guest';
-  \`\`\`
-
-#### 2. Error \`419 Page Expired / CSRF Token Mismatch\`
-- **Penyebab**: Token CSRF kadaluarsa atau header \`X-XSRF-TOKEN\` tidak terkirim pada AJAX/Fetch request.
-- **Solusi**: Pastikan meta tag CSRF ada dan sertakan pada header fetch:
-  \`\`\`javascript
-  fetch('/api/order', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
-    },
-    body: JSON.stringify(payload)
-  });
-  \`\`\`
-
-#### 3. Error \`QueryException: Integrity constraint violation\`
-- **Penyebab**: Mencoba insert data dengan foreign key yang tidak ada di tabel induk, atau melanggar \`UNIQUE\` constraint.
-- **Solusi**: Pastikan parent record sudah tersimpan sebelum me-relasikannya, atau gunakan \`firstOrCreate\` / \`updateOrCreate\`.`;
-      }
-
-      // 7. General Comprehensive Dev Answer
-      return `### 🤖 Senior Software Engineer Copilot
-
-Terima kasih atas pertanyaan Anda mengenai:
-> **"${query.length > 80 ? query.substring(0, 80) + '...' : query}"**
-
-Berikut panduan arsitektur & implementasi teknis terbaik:
-
-#### 1. Solusi Arsitektur
-Untuk mengimplementasikan kebutuhan ini dengan efisien, maintainable, dan scalable:
-- **Separation of Concerns**: Pisahkan layer Controller (hanya menangani Request/Response) dari Service Layer (berisi core business logic).
-- **Data Integrity**: Gunakan database transaction (\`DB::transaction\`) saat memodifikasi lebih dari satu tabel.
-- **Defensive Null Safety**: Gunakan operator \`?->\` (PHP) atau \`?.\` (JS) untuk mencegah null pointer exceptions.
-
-#### 2. Contoh Implementasi Clean Code
-\`\`\`php
-namespace App\\Services;
-
-use Illuminate\\Support\\Facades\\DB;
-use App\\Models\\Order;
-
-class CoreProcessorService
-{
-    public function execute(array $payload): array
-    {
-        return DB::transaction(function () use ($payload) {
-            // Validasi & eksekusi bisnis logic
-            $record = Order::create([
-                'order_number' => 'ORD-' . strtoupper(uniqid()),
-                'status' => 'processed',
-                'created_at' => now(),
-            ]);
-
-            return [
-                'success' => true,
-                'data' => $record,
-            ];
-        });
-    }
-}
-\`\`\`
-
-#### 3. Best Practices & Checklist
-- [x] Tipe data uang selalu integer (\`bigInteger\`) untuk menghindari rounding bug.
-- [x] Hindari N+1 query dengan eager loading (\`with()\`).
-- [x] Buat database index pada kolom filtering.
-
-*💡 Ingin bantuan membuatkan migration, pesan conventional commit, atau unit test terkait modul ini? Coba klik preset prompt di atas!*`;
+      return finalHtml;
     }
 
     function MiniAiTool() {
@@ -1555,7 +1363,7 @@ class CoreProcessorService
           {
             id: 1,
             sender: 'ai',
-            text: '👋 Halo! Saya **Mini AI Dev Copilot** (100% Free, Offline-Ready, No Login & No Redirects). Tanyakan arsitektur kode, minta review git diff, buat migration Laravel, atau optimasi query database!',
+            text: 'Halo, saya AI Assistant. Tanyakan apa saja seputar pengetahuan umum, analisis, perbandingan data, penulisan dokumen, hingga coding dan arsitektur sistem.',
             time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
           },
         ];
@@ -1563,25 +1371,36 @@ class CoreProcessorService
 
       const [input, setInput] = useState('');
       const [loading, setLoading] = useState(false);
-      const [showSettings, setShowSettings] = useState(false);
-      const [apiKey, setApiKey] = useState(() => localStorage.getItem('gemini_api_key') || '');
-      const [model, setModel] = useState(() => localStorage.getItem('gemini_model') || 'smart-engine');
-      const [ollamaUrl, setOllamaUrl] = useState(() => localStorage.getItem('ollama_url') || 'http://localhost:11434');
       const [copiedIndex, setCopiedIndex] = useState(null);
+      const [quotaInfo, setQuotaInfo] = useState(null);
       const chatBottomRef = useRef(null);
+
+      const fetchQuota = async () => {
+        try {
+          const res = await fetch('https://openrouter.ai/api/v1/auth/key', {
+            headers: {
+              Authorization: `Bearer ${DEFAULT_OPENROUTER_KEY}`,
+            },
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data?.data?.free_model_daily_requests) {
+              setQuotaInfo(data.data.free_model_daily_requests);
+            }
+          }
+        } catch {
+          // ignore
+        }
+      };
+
+      useEffect(() => {
+        fetchQuota();
+      }, []);
 
       useEffect(() => {
         localStorage.setItem('mini_ai_messages', JSON.stringify(messages));
         chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
       }, [messages]);
-
-      const handleSaveSettings = (e) => {
-        e.preventDefault();
-        localStorage.setItem('gemini_api_key', apiKey.trim());
-        localStorage.setItem('gemini_model', model);
-        localStorage.setItem('ollama_url', ollamaUrl.trim());
-        setShowSettings(false);
-      };
 
       const handleClearChat = () => {
         if (window.confirm('Hapus seluruh riwayat percakapan chat?')) {
@@ -1589,7 +1408,7 @@ class CoreProcessorService
             {
               id: Date.now(),
               sender: 'ai',
-              text: 'Percakapan telah dibersihkan. Ada yang bisa saya bantu selanjutnya?',
+              text: 'Percakapan telah dibersihkan. Silakan tanyakan hal lain yang ingin dibahas.',
               time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
             },
           ];
@@ -1600,7 +1419,7 @@ class CoreProcessorService
 
       const handleSend = async (customPrompt) => {
         const query = (customPrompt || input).trim();
-        if (!query || loading) return;
+        if (isLimitReached || !query || loading) return;
 
         const userMsg = {
           id: Date.now(),
@@ -1614,105 +1433,69 @@ class CoreProcessorService
         if (!customPrompt) setInput('');
         setLoading(true);
 
-        const currentApiKey = localStorage.getItem('gemini_api_key') || apiKey.trim();
-        const currentModel = localStorage.getItem('gemini_model') || model;
-        const currentOllamaUrl = localStorage.getItem('ollama_url') || ollamaUrl || 'http://localhost:11434';
-
-        // 1. If Google Gemini API is chosen and Key is provided
-        if (currentModel.startsWith('gemini') && currentApiKey) {
-          try {
-            const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${currentApiKey}`;
-            const res = await fetch(endpoint, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                contents: [
-                  {
-                    role: 'user',
-                    parts: [
-                      {
-                        text: `Anda adalah Senior Principal Software Engineer & Architect (PHP/Laravel, JavaScript/React, SQL, Git). Berikan jawaban yang tepat, clean code, dan format markdown rapi.\n\nPertanyaan:\n${query}`,
-                      },
-                    ],
-                  },
-                ],
-                generationConfig: {
-                  temperature: 0.3,
-                  maxOutputTokens: 3000,
-                },
-              }),
-            });
-
-            if (!res.ok) {
-              const errData = await res.json().catch(() => ({}));
-              throw new Error(errData.error?.message || `API error ${res.status}`);
-            }
-
-            const data = await res.json();
-            const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Tidak ada respon yang diterima.';
-
-            setMessages((prev) => [
-              ...prev,
-              {
-                id: Date.now() + 1,
-                sender: 'ai',
-                text: aiText,
-                time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
-              },
-            ]);
-            setLoading(false);
-            return;
-          } catch (err) {
-            console.warn('Gemini API failed, falling back to Smart Engine:', err);
-          }
-        }
-
-        // 2. If Local Ollama is chosen
-        if (currentModel === 'ollama') {
-          try {
-            const res = await fetch(`${currentOllamaUrl}/api/generate`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                model: 'deepseek-r1:latest',
-                prompt: query,
-                stream: false,
-              }),
-            });
-
-            if (res.ok) {
-              const data = await res.json();
-              setMessages((prev) => [
-                ...prev,
+        try {
+          const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${DEFAULT_OPENROUTER_KEY}`,
+              'HTTP-Referer': window.location.href,
+              'X-Title': 'MR Template AI Assistant',
+            },
+            body: JSON.stringify({
+              model: FREE_MODEL,
+              messages: [
                 {
-                  id: Date.now() + 1,
-                  sender: 'ai',
-                  text: data.response || 'Tidak ada respon dari Ollama.',
-                  time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+                  role: 'system',
+                  content:
+                    'Anda adalah asisten AI yang cerdas, lugas, dan profesional. Jawab pertanyaan pengguna secara akurat, kontekstual, dan terstruktur dengan format markdown. Jangan gunakan emoji yang tidak perlu atau berlebihan.',
                 },
-              ]);
-              setLoading(false);
-              return;
-            }
-          } catch {
-            // Fallback to Smart Engine
-          }
-        }
+                ...messages.slice(-8).map((m) => ({
+                  role: m.sender === 'ai' ? 'assistant' : 'user',
+                  content: m.text,
+                })),
+                { role: 'user', content: query },
+              ],
+            }),
+          });
 
-        // 3. Default: Instant, 100% Free, Zero-Login Smart Developer Knowledge Engine
-        setTimeout(() => {
-          const smartResponse = generateSmartDevResponse(query);
+          const data = await res.json();
+
+          if (!res.ok) {
+            throw new Error(data?.error?.message || `HTTP ${res.status}: Gagal memproses ke OpenRouter API.`);
+          }
+
+          const rawAiText = data?.choices?.[0]?.message?.content || '';
+          const aiText =
+            rawAiText
+              .replace(/^User Safety:\s*\w+\s*/gim, '')
+              .replace(/^Response Safety:\s*\w+\s*/gim, '')
+              .replace(/<think>[\s\S]*?<\/think>/gi, '')
+              .trim() || 'Tidak ada respon dari AI.';
+
           setMessages((prev) => [
             ...prev,
             {
               id: Date.now() + 1,
               sender: 'ai',
-              text: smartResponse,
+              text: aiText,
               time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
             },
           ]);
+          fetchQuota();
+        } catch (err) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: Date.now() + 1,
+              sender: 'ai',
+              text: `Gagal memproses permintaan: ${err.message || 'Terjadi kesalahan jaringan'}. Silakan coba kirim ulang.`,
+              time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+            },
+          ]);
+        } finally {
           setLoading(false);
-        }, 400);
+        }
       };
 
       const handleCopyMessage = async (text, idx) => {
@@ -1725,18 +1508,19 @@ class CoreProcessorService
         }
       };
 
-      const modelLabel = useMemo(() => {
-        switch (model) {
-          case 'ollama':
-            return '🦙 Local Ollama (Localhost)';
-          case 'gemini-2.0-flash':
-            return '🔑 Gemini 2.0 Flash (Key)';
-          case 'gemini-1.5-pro':
-            return '🔑 Gemini 1.5 Pro (Key)';
-          default:
-            return '⚡ Smart Dev Engine (Free / Instant)';
-        }
-      }, [model]);
+      const isLimitReached = quotaInfo !== null && quotaInfo.remaining <= 0;
+
+      const getResetCountdown = () => {
+        const now = new Date();
+        const nextReset = new Date();
+        nextReset.setUTCHours(24, 0, 0, 0);
+        const diffMs = Math.max(0, nextReset.getTime() - now.getTime());
+        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+        const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+        return { hours: diffHours, mins: diffMins };
+      };
+
+      const resetTimer = getResetCountdown();
 
       return (
         <div className="ai-chat-container">
@@ -1747,38 +1531,53 @@ class CoreProcessorService
                 <SparklesIcon />
               </div>
               <div>
-                <h3>Mini AI Dev Copilot</h3>
-                <p className="ai-model-status">
-                  ⚡ Engine: <span style={{ color: 'var(--accent-blue)', fontWeight: 600 }}>{modelLabel}</span>
-                </p>
+                <h3>AI Assistant</h3>
               </div>
             </div>
 
             <div className="ai-header-actions">
-              <select
-                className="city-select"
-                value={model}
-                onChange={(e) => {
-                  setModel(e.target.value);
-                  localStorage.setItem('gemini_model', e.target.value);
-                }}
-                style={{ fontSize: '0.78rem', padding: '5px 8px' }}
-              >
-                <option value="smart-engine">⚡ Smart Dev Engine (100% Free / No Login)</option>
-                <option value="ollama">🦙 Local Ollama (localhost:11434)</option>
-                <option value="gemini-2.0-flash">🔑 Gemini 2.0 Flash (Key)</option>
-                <option value="gemini-1.5-pro">🔑 Gemini 1.5 Pro (Key)</option>
-              </select>
+              {quotaInfo && (
+                <div
+                  className="ai-quota-widget"
+                  title={`Digunakan: ${quotaInfo.used} | Tersisa: ${quotaInfo.remaining} dari ${quotaInfo.limit} request harian | Reset setiap 07:00 WIB (${resetTimer.hours}j ${resetTimer.mins}m lagi)`}
+                >
+                  <div className="ai-quota-info">
+                    <span className="ai-quota-label">Sisa Kuota</span>
+                    <span
+                      className="ai-quota-value"
+                      style={{
+                        color:
+                          quotaInfo.remaining / quotaInfo.limit > 0.4
+                            ? 'var(--accent-green)'
+                            : quotaInfo.remaining / quotaInfo.limit > 0.15
+                            ? '#d29922'
+                            : '#f85149',
+                      }}
+                    >
+                      {Math.round((quotaInfo.remaining / quotaInfo.limit) * 100)}% ({quotaInfo.remaining}/{quotaInfo.limit})
+                    </span>
+                  </div>
+                  <div className="ai-quota-track">
+                    <div
+                      className="ai-quota-bar"
+                      style={{
+                        width: `${Math.max(0, Math.min(100, (quotaInfo.remaining / quotaInfo.limit) * 100))}%`,
+                        background:
+                          quotaInfo.remaining / quotaInfo.limit > 0.4
+                            ? 'linear-gradient(90deg, #238636, #3fb950)'
+                            : quotaInfo.remaining / quotaInfo.limit > 0.15
+                            ? 'linear-gradient(90deg, #9e6a03, #d29922)'
+                            : 'linear-gradient(90deg, #da3633, #f85149)',
+                      }}
+                    />
+                  </div>
+                  <div className="ai-quota-reset-text">
+                    <span>Reset:</span>
+                    <span><strong>07:00 WIB</strong> ({resetTimer.hours}j {resetTimer.mins}m lagi)</span>
+                  </div>
+                </div>
+              )}
 
-              <button
-                type="button"
-                className="ai-btn-action"
-                onClick={() => setShowSettings(true)}
-                title="Pengaturan Engine & Key"
-              >
-                <SettingsIcon />
-                <span>Pengaturan</span>
-              </button>
               <button
                 type="button"
                 className="ai-btn-action"
@@ -1786,6 +1585,7 @@ class CoreProcessorService
                 title="Bersihkan Percakapan"
               >
                 <TrashIcon />
+                <span>Bersihkan Chat</span>
               </button>
             </div>
           </div>
@@ -1797,7 +1597,10 @@ class CoreProcessorService
                 key={idx}
                 type="button"
                 className="ai-preset-chip"
-                onClick={() => setInput(preset.prompt)}
+                disabled={isLimitReached || loading}
+                onClick={() => {
+                  setInput(preset.prompt);
+                }}
               >
                 {preset.title}
               </button>
@@ -1814,7 +1617,7 @@ class CoreProcessorService
                 <div className="ai-message-bubble">
                   <div className="ai-message-header">
                     <span className="ai-message-sender-name">
-                      {msg.sender === 'ai' ? 'Mini AI' : 'You'}
+                      {msg.sender === 'ai' ? 'AI Assistant' : 'You'}
                     </span>
                     <span className="ai-message-time">{msg.time}</span>
                     {msg.sender === 'ai' && (
@@ -1829,7 +1632,7 @@ class CoreProcessorService
                     )}
                   </div>
                   <div className="ai-message-content">
-                    <pre className="markdown-body-render">{msg.text}</pre>
+                    <div dangerouslySetInnerHTML={{ __html: parseMarkdownToHtml(msg.text) }} />
                   </div>
                 </div>
               </div>
@@ -1846,7 +1649,7 @@ class CoreProcessorService
                     <span />
                     <span />
                   </div>
-                  <span className="typing-text">Sedang menganalisis & menyusun solusi cerdas...</span>
+                  <span className="typing-text">AI sedang menyusun jawaban...</span>
                 </div>
               </div>
             )}
@@ -1854,12 +1657,30 @@ class CoreProcessorService
             <div ref={chatBottomRef} />
           </div>
 
+          {/* ── Limit Reached Warning Message ── */}
+          {isLimitReached && (
+            <div className="ai-limit-banner">
+              <span className="ai-limit-icon">⚠️</span>
+              <div>
+                <span className="ai-limit-banner-title">Batas Kuota Harian Tercapai (0/{quotaInfo?.limit || 50} Request)</span>
+                <span>
+                  Kuota gratis harian akun Anda telah mencapai batas maksimal hari ini. Kuota akan direset otomatis pada pukul <strong>07:00 WIB</strong> ({resetTimer.hours} jam {resetTimer.mins} menit lagi). Form chat dinonaktifkan sementara.
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* ── Chat Input Bar ── */}
           <div className="ai-chat-input-wrapper">
             <textarea
               className="ai-textarea"
               rows={2}
-              placeholder="Tanyakan kode, paste git diff, error log, atau minta query SQL... (Enter untuk kirim, Shift+Enter untuk baris baru)"
+              disabled={isLimitReached || loading}
+              placeholder={
+                isLimitReached
+                  ? 'Kuota harian gratis telah habis (0/50 request). Form chat dinonaktifkan sementara.'
+                  : 'Tanyakan apa saja (pengetahuan umum, ide, draft email, sains, coding, obrolan santai)... (Enter untuk kirim)'
+              }
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
@@ -1872,113 +1693,12 @@ class CoreProcessorService
             <button
               type="button"
               className="ai-send-btn"
-              disabled={!input.trim() || loading}
+              disabled={!input.trim() || loading || isLimitReached}
               onClick={() => handleSend()}
             >
               <SendIcon />
             </button>
           </div>
-
-          {/* ── Settings Modal ── */}
-          {showSettings && (
-            <div className="modal-backdrop" onClick={() => setShowSettings(false)}>
-              <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-                <div className="modal-header">
-                  <span className="modal-title">
-                    <SettingsIcon />
-                    Pengaturan Engine AI
-                  </span>
-                  <button
-                    type="button"
-                    className="modal-close-btn"
-                    onClick={() => setShowSettings(false)}
-                  >
-                    ✕
-                  </button>
-                </div>
-
-                <form onSubmit={handleSaveSettings} className="modal-body">
-                  <div className="field-group">
-                    <label className="field-label" htmlFor="geminiModelSelect">
-                      Pilih Engine AI
-                    </label>
-                    <select
-                      id="geminiModelSelect"
-                      className="select-input"
-                      value={model}
-                      onChange={(e) => setModel(e.target.value)}
-                    >
-                      <option value="smart-engine">⚡ Smart Dev Engine (100% Free / Built-in / Tanpa Login)</option>
-                      <option value="ollama">🦙 Local Ollama (Localhost AI)</option>
-                      <option value="gemini-2.0-flash">🔑 Gemini 2.0 Flash (Perlu Gemini Key)</option>
-                      <option value="gemini-1.5-pro">🔑 Gemini 1.5 Pro (Perlu Gemini Key)</option>
-                    </select>
-                    <p className="field-hint">
-                      <strong>Smart Dev Engine</strong> bekerja 100% gratis secara lokal/offline, instan, tanpa login, tanpa popup, dan tanpa batasan request.
-                    </p>
-                  </div>
-
-                  {model === 'ollama' && (
-                    <div className="field-group">
-                      <label className="field-label" htmlFor="ollamaUrlInput">
-                        Ollama Server URL
-                      </label>
-                      <input
-                        id="ollamaUrlInput"
-                        type="text"
-                        className="input"
-                        placeholder="http://localhost:11434"
-                        value={ollamaUrl}
-                        onChange={(e) => setOllamaUrl(e.target.value)}
-                      />
-                    </div>
-                  )}
-
-                  {model.startsWith('gemini') && (
-                    <div className="field-group">
-                      <label className="field-label" htmlFor="geminiApiKey">
-                        Google Gemini API Key
-                      </label>
-                      <input
-                        id="geminiApiKey"
-                        type="password"
-                        className="input"
-                        placeholder="AIzaSy..."
-                        value={apiKey}
-                        onChange={(e) => setApiKey(e.target.value)}
-                        autoComplete="off"
-                      />
-                      <p className="field-hint">
-                        Dapatkan key gratis di{' '}
-                        <a
-                          href="https://aistudio.google.com/app/apikey"
-                          target="_blank"
-                          rel="noreferrer"
-                          style={{ color: 'var(--accent-blue)', textDecoration: 'underline' }}
-                        >
-                          Google AI Studio
-                        </a>
-                        .
-                      </p>
-                    </div>
-                  )}
-
-                  <div className="modal-actions">
-                    <button
-                      type="button"
-                      className="btn btn-reset"
-                      onClick={() => setShowSettings(false)}
-                    >
-                      Batal
-                    </button>
-                    <button type="submit" className="btn btn-copy">
-                      Simpan Konfigurasi
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          )}
         </div>
       );
     }
