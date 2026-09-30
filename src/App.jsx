@@ -266,27 +266,76 @@ const INITIAL_STATE = {
 // ─── Kota/Wilayah List ─────────────────────────────────────────────────────
 
 const CITIES_LIST = [
-  { id: 'Jakarta', name: 'DKI Jakarta', region: 'DKI Jakarta', lat: -6.2088, lng: 106.8456 },
-  { id: 'Jakarta Selatan', name: 'Jakarta Selatan', region: 'DKI Jakarta', lat: -6.2615, lng: 106.8106 },
-  { id: 'Jakarta Pusat', name: 'Jakarta Pusat', region: 'DKI Jakarta', lat: -6.1805, lng: 106.8284 },
-  { id: 'Jakarta Barat', name: 'Jakarta Barat', region: 'DKI Jakarta', lat: -6.1683, lng: 106.7588 },
-  { id: 'Jakarta Timur', name: 'Jakarta Timur', region: 'DKI Jakarta', lat: -6.2250, lng: 106.9004 },
-  { id: 'Jakarta Utara', name: 'Jakarta Utara', region: 'DKI Jakarta', lat: -6.1214, lng: 106.7741 },
-  { id: 'Kepulauan Seribu', name: 'Kepulauan Seribu', region: 'DKI Jakarta', lat: -5.6122, lng: 106.5622 },
-  { id: 'Bogor', name: 'Kota Bogor', region: 'Jawa Barat', lat: -6.5971, lng: 106.8060 },
-  { id: 'Depok', name: 'Kota Depok', region: 'Jawa Barat', lat: -6.4025, lng: 106.7942 },
-  { id: 'Tangerang', name: 'Kota Tangerang', region: 'Banten', lat: -6.1783, lng: 106.6319 },
-  { id: 'Bekasi', name: 'Kota Bekasi', region: 'Jawa Barat', lat: -6.2383, lng: 106.9756 },
-  { id: 'Bandung', name: 'Kota Bandung', region: 'Jawa Barat', lat: -6.9175, lng: 107.6191 },
-  { id: 'Surabaya', name: 'Kota Surabaya', region: 'Jawa Timur', lat: -7.2575, lng: 112.7521 },
-  { id: 'Semarang', name: 'Kota Semarang', region: 'Jawa Tengah', lat: -6.9667, lng: 110.4167 },
-  { id: 'Yogyakarta', name: 'DI Yogyakarta', region: 'DI Yogyakarta', lat: -7.7956, lng: 110.3695 },
+  // mqId = ID wilayah resmi Kemenag RI (dipakai MyQuran API)
+  { id: 'Jakarta', name: 'DKI Jakarta', region: 'DKI Jakarta', mqId: '1301' },
+  { id: 'Jakarta Selatan', name: 'Jakarta Selatan', region: 'DKI Jakarta', mqId: '1301' },
+  { id: 'Jakarta Pusat', name: 'Jakarta Pusat', region: 'DKI Jakarta', mqId: '1301' },
+  { id: 'Jakarta Barat', name: 'Jakarta Barat', region: 'DKI Jakarta', mqId: '1301' },
+  { id: 'Jakarta Timur', name: 'Jakarta Timur', region: 'DKI Jakarta', mqId: '1301' },
+  { id: 'Jakarta Utara', name: 'Jakarta Utara', region: 'DKI Jakarta', mqId: '1301' },
+  { id: 'Kepulauan Seribu', name: 'Kepulauan Seribu', region: 'DKI Jakarta', mqId: '1302' },
+  { id: 'Bogor', name: 'Kota Bogor', region: 'Jawa Barat', mqId: '1222' },
+  { id: 'Depok', name: 'Kota Depok', region: 'Jawa Barat', mqId: '1225' },
+  { id: 'Tangerang', name: 'Kota Tangerang', region: 'Banten', mqId: '1107' },
+  { id: 'Bekasi', name: 'Kota Bekasi', region: 'Jawa Barat', mqId: '1221' },
+  { id: 'Bandung', name: 'Kota Bandung', region: 'Jawa Barat', mqId: '1219' },
+  { id: 'Surabaya', name: 'Kota Surabaya', region: 'Jawa Timur', mqId: '1638' },
+  { id: 'Semarang', name: 'Kota Semarang', region: 'Jawa Tengah', mqId: '1433' },
+  { id: 'Yogyakarta', name: 'DI Yogyakarta', region: 'DI Yogyakarta', mqId: '1505' },
 ]
+
+// ─── MyQuran API (data resmi Kemenag RI) ────────────────────────────────────
+
+const MYQURAN_BASE = 'https://api.myquran.com/v2'
+const FETCH_TIMEOUT_MS = 15000
+
+function fetchWithTimeout(url, options = {}) {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
+  return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timer))
+}
+
+const HIJRI_MONTHS_ID = [
+  'Muharram', 'Safar', 'Rabiul Awal', 'Rabiul Akhir', 'Jumadil Awal', 'Jumadil Akhir',
+  'Rajab', "Sya'ban", 'Ramadhan', 'Syawal', "Dzulqa'dah", 'Dzulhijjah',
+]
+
+const hijriFormatter = typeof Intl !== 'undefined'
+  ? new Intl.DateTimeFormat('en-u-ca-islamic-umalqura', { day: 'numeric', month: 'numeric', year: 'numeric' })
+  : null
+const hijriCache = new Map()
+
+function getHijriParts(date) {
+  if (!date || isNaN(date) || !hijriFormatter) return null
+  const cacheKey = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`
+  if (hijriCache.has(cacheKey)) return hijriCache.get(cacheKey)
+  try {
+    const parts = hijriFormatter.formatToParts(date)
+    const get = (type) => parts.find((p) => p.type === type)?.value
+    const day = parseInt(get('day'), 10)
+    const month = parseInt(get('month'), 10)
+    const year = parseInt(get('year'), 10)
+    if (!day || !month || !year) return null
+    const result = { day, month: HIJRI_MONTHS_ID[month - 1] || String(month), year }
+    hijriCache.set(cacheKey, result)
+    return result
+  } catch {
+    return null
+  }
+}
+
+function parseGregorianFromTanggal(tanggal) {
+  if (!tanggal) return null
+  const m = String(tanggal).match(/(\d{2})\/(\d{2})\/(\d{4})/) // "Rabu, 30/09/2026"
+  if (!m) return null
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
+  return { day: m[1], monthShort: monthNames[Number(m[2]) - 1] || m[2], year: m[3] }
+}
 
 // ─── Prayer Times Component ────────────────────────────────────────────────
 
 const PRAYER_KEYS = [
-  { key: 'Imsak', label: 'Imsak', icon: MoonIcon, desc: 'Batas akhir sahur' },
+  { key: 'Imsak', label: 'Imsak', icon: MoonIcon, desc: 'Batas akhir waktu sahur' },
   { key: 'Fajr', label: 'Subuh', icon: SunriseIcon, desc: 'Fajar Shodiq terbit' },
   { key: 'Sunrise', label: 'Terbit', icon: SunIcon, desc: 'Batas akhir waktu Subuh' },
   { key: 'Dhuhr', label: 'Dzuhur', icon: SunIcon, desc: 'Matahari tergelincir' },
@@ -294,6 +343,17 @@ const PRAYER_KEYS = [
   { key: 'Maghrib', label: 'Maghrib', icon: SunsetIcon, desc: 'Matahari terbenam / Buka Puasa' },
   { key: 'Isha', label: 'Isya', icon: MoonIcon, desc: 'Syafaq merah menghilang' },
 ]
+
+// Key PRAYER_KEYS -> field pada respons MyQuran (objek jadwal flat)
+const SCHEDULE_FIELD = {
+  Imsak: 'imsak',
+  Fajr: 'subuh',
+  Sunrise: 'terbit',
+  Dhuhr: 'dzuhur',
+  Asr: 'ashar',
+  Maghrib: 'maghrib',
+  Isha: 'isya',
+}
 
 function cleanTimeStr(str) {
   if (!str) return '--:--'
@@ -341,30 +401,37 @@ function JadwalSholatTool() {
     try {
       const now = new Date()
       const year = now.getFullYear()
-      const month = now.getMonth() + 1
+      const month = String(now.getMonth() + 1).padStart(2, '0')
+      const day = String(now.getDate()).padStart(2, '0')
+      const cityId = selectedCity.mqId
 
-      const todayUrl = `https://api.aladhan.com/v1/timingsByCity?city=${encodeURIComponent(selectedCity.id)}&country=Indonesia&method=20`
-      const todayRes = await fetch(todayUrl)
+      const todayUrl = `${MYQURAN_BASE}/sholat/jadwal/${cityId}/${year}/${month}/${day}`
+      const todayRes = await fetchWithTimeout(todayUrl)
       if (!todayRes.ok) throw new Error(`Gagal mengambil data jadwal hari ini (${todayRes.status})`)
       const todayJson = await todayRes.json()
 
-      if (todayJson && todayJson.code === 200 && todayJson.data) {
-        setTodayData(todayJson.data)
+      const todayJadwal = todayJson?.status === true ? todayJson?.data?.jadwal : null
+      if (todayJadwal) {
+        setTodayData(todayJadwal)
       } else {
         throw new Error('Format data API tidak valid')
       }
 
-      const monthUrl = `https://api.aladhan.com/v1/calendarByCity?city=${encodeURIComponent(selectedCity.id)}&country=Indonesia&method=20&month=${month}&year=${year}`
-      const monthRes = await fetch(monthUrl)
+      const monthUrl = `${MYQURAN_BASE}/sholat/jadwal/${cityId}/${year}/${month}`
+      const monthRes = await fetchWithTimeout(monthUrl)
       if (monthRes.ok) {
         const monthJson = await monthRes.json()
-        if (monthJson && monthJson.code === 200 && Array.isArray(monthJson.data)) {
-          setMonthData(monthJson.data)
+        if (monthJson?.status === true && Array.isArray(monthJson?.data?.jadwal)) {
+          setMonthData(monthJson.data.jadwal)
         }
       }
     } catch (err) {
       console.error('Fetch prayer schedule error:', err)
-      setError(err.message || 'Gagal tersambung ke API Jadwal Sholat.')
+      setError(
+        err?.name === 'AbortError'
+          ? 'Timeout: server API jadwal sholat tidak merespons.'
+          : (err.message || 'Gagal tersambung ke API Jadwal Sholat.')
+      )
     } finally {
       setLoading(false)
     }
@@ -375,19 +442,20 @@ function JadwalSholatTool() {
   }, [fetchPrayerData])
 
   const prayerStatus = useMemo(() => {
-    if (!todayData || !todayData.timings) return null
+    if (!todayData) return null
 
     const currentMinutes = currentTime.getHours() * 60 + currentTime.getMinutes()
     const currentSeconds = currentTime.getSeconds()
 
+    const t = todayData
     const prayers = [
-      { key: 'Imsak', label: 'Imsak', time: cleanTimeStr(todayData.timings.Imsak), minutes: timeStrToMinutes(todayData.timings.Imsak) },
-      { key: 'Fajr', label: 'Subuh', time: cleanTimeStr(todayData.timings.Fajr), minutes: timeStrToMinutes(todayData.timings.Fajr) },
-      { key: 'Sunrise', label: 'Terbit', time: cleanTimeStr(todayData.timings.Sunrise), minutes: timeStrToMinutes(todayData.timings.Sunrise) },
-      { key: 'Dhuhr', label: 'Dzuhur', time: cleanTimeStr(todayData.timings.Dhuhr), minutes: timeStrToMinutes(todayData.timings.Dhuhr) },
-      { key: 'Asr', label: 'Ashar', time: cleanTimeStr(todayData.timings.Asr), minutes: timeStrToMinutes(todayData.timings.Asr) },
-      { key: 'Maghrib', label: 'Maghrib', time: cleanTimeStr(todayData.timings.Maghrib), minutes: timeStrToMinutes(todayData.timings.Maghrib) },
-      { key: 'Isha', label: 'Isya', time: cleanTimeStr(todayData.timings.Isha), minutes: timeStrToMinutes(todayData.timings.Isha) },
+      { key: 'Imsak', label: 'Imsak', time: cleanTimeStr(t.imsak), minutes: timeStrToMinutes(t.imsak) },
+      { key: 'Fajr', label: 'Subuh', time: cleanTimeStr(t.subuh), minutes: timeStrToMinutes(t.subuh) },
+      { key: 'Sunrise', label: 'Terbit', time: cleanTimeStr(t.terbit), minutes: timeStrToMinutes(t.terbit) },
+      { key: 'Dhuhr', label: 'Dzuhur', time: cleanTimeStr(t.dzuhur), minutes: timeStrToMinutes(t.dzuhur) },
+      { key: 'Asr', label: 'Ashar', time: cleanTimeStr(t.ashar), minutes: timeStrToMinutes(t.ashar) },
+      { key: 'Maghrib', label: 'Maghrib', time: cleanTimeStr(t.maghrib), minutes: timeStrToMinutes(t.maghrib) },
+      { key: 'Isha', label: 'Isya', time: cleanTimeStr(t.isya), minutes: timeStrToMinutes(t.isya) },
     ]
 
     let nextPrayer = null
@@ -422,24 +490,23 @@ function JadwalSholatTool() {
   }, [todayData, currentTime])
 
   const handleCopySchedule = useCallback(async () => {
-    if (!todayData || !todayData.timings) return
-    const dateReadable = todayData.date?.readable || new Date().toLocaleDateString('id-ID')
-    const hijriDate = todayData.date?.hijri
-      ? `${todayData.date.hijri.day} ${todayData.date.hijri.month?.en} ${todayData.date.hijri.year} H`
-      : ''
+    if (!todayData) return
+    const dateReadable = todayData.tanggal || new Date().toLocaleDateString('id-ID')
+    const hj = getHijriParts(todayData.date ? new Date(todayData.date) : new Date())
+    const hijriDate = hj ? `${hj.day} ${hj.month} ${hj.year} H` : ''
 
     const text = [
       `🕌 *Jadwal Sholat ${selectedCity.name}*`,
       `📅 ${dateReadable} (${hijriDate})`,
-      `Sumber: Kemenag RI / Aladhan`,
+      `Sumber: API Kemenag RI (MyQuran)`,
       '',
-      `• Imsak   : ${cleanTimeStr(todayData.timings.Imsak)} WIB`,
-      `• Subuh   : ${cleanTimeStr(todayData.timings.Fajr)} WIB`,
-      `• Terbit  : ${cleanTimeStr(todayData.timings.Sunrise)} WIB`,
-      `• Dzuhur  : ${cleanTimeStr(todayData.timings.Dhuhr)} WIB`,
-      `• Ashar   : ${cleanTimeStr(todayData.timings.Asr)} WIB`,
-      `• Maghrib : ${cleanTimeStr(todayData.timings.Maghrib)} WIB`,
-      `• Isya    : ${cleanTimeStr(todayData.timings.Isha)} WIB`,
+      `• Imsak   : ${cleanTimeStr(todayData.imsak)} WIB`,
+      `• Subuh   : ${cleanTimeStr(todayData.subuh)} WIB`,
+      `• Terbit  : ${cleanTimeStr(todayData.terbit)} WIB`,
+      `• Dzuhur  : ${cleanTimeStr(todayData.dzuhur)} WIB`,
+      `• Ashar   : ${cleanTimeStr(todayData.ashar)} WIB`,
+      `• Maghrib : ${cleanTimeStr(todayData.maghrib)} WIB`,
+      `• Isya    : ${cleanTimeStr(todayData.isya)} WIB`,
     ].join('\n')
 
     try {
@@ -451,8 +518,10 @@ function JadwalSholatTool() {
     }
   }, [todayData, selectedCity])
 
-  const hijriString = todayData?.date?.hijri
-    ? `${todayData.date.hijri.day} ${todayData.date.hijri.month?.en || ''} ${todayData.date.hijri.year} H`
+  const todayDateKey = `${currentTime.getFullYear()}-${String(currentTime.getMonth() + 1).padStart(2, '0')}-${String(currentTime.getDate()).padStart(2, '0')}`
+  const hijriParts = getHijriParts(todayData?.date ? new Date(todayData.date) : new Date())
+  const hijriString = hijriParts
+    ? `${hijriParts.day} ${hijriParts.month} ${hijriParts.year} H`
     : 'Kemenag RI'
 
   const gregorianString = currentTime.toLocaleDateString('id-ID', {
@@ -591,7 +660,7 @@ function JadwalSholatTool() {
 
           <div className="prayer-cards-grid">
             {PRAYER_KEYS.map((item) => {
-              const rawTime = todayData?.timings ? todayData.timings[item.key] : null
+              const rawTime = todayData ? todayData[SCHEDULE_FIELD[item.key]] : null
               const timeFormatted = cleanTimeStr(rawTime)
               const isNext = prayerStatus?.nextPrayer?.key === item.key
               const isCurrent = prayerStatus?.currentPrayer?.key === item.key
@@ -661,25 +730,25 @@ function JadwalSholatTool() {
               <tbody>
                 {monthData && monthData.length > 0 ? (
                   monthData.map((dayItem, idx) => {
-                    const isTodayRow = dayItem.date?.gregorian?.day === String(new Date().getDate()).padStart(2, '0')
-                    const d = dayItem.date?.gregorian
-                    const h = dayItem.date?.hijri
-                    const t = dayItem.timings
+                    const isTodayRow = dayItem.date === todayDateKey
+                    const g = parseGregorianFromTanggal(dayItem.tanggal)
+                    const hj = getHijriParts(dayItem.date ? new Date(dayItem.date) : null)
+                    const t = dayItem
 
                     return (
-                      <tr key={idx} className={isTodayRow ? 'today-highlight-row' : ''}>
+                      <tr key={dayItem.date || idx} className={isTodayRow ? 'today-highlight-row' : ''}>
                         <td className="cell-date">
-                          <strong>{d?.day}</strong> {d?.month?.en?.substring(0, 3)} {d?.year}
+                          <strong>{g?.day}</strong> {g?.monthShort} {g?.year}
                           {isTodayRow && <span className="today-chip">Hari Ini</span>}
                         </td>
-                        <td className="cell-hijri">{h?.day} {h?.month?.en}</td>
-                        <td>{cleanTimeStr(t?.Imsak)}</td>
-                        <td className="fajr-cell">{cleanTimeStr(t?.Fajr)}</td>
-                        <td>{cleanTimeStr(t?.Sunrise)}</td>
-                        <td>{cleanTimeStr(t?.Dhuhr)}</td>
-                        <td>{cleanTimeStr(t?.Asr)}</td>
-                        <td className="maghrib-cell">{cleanTimeStr(t?.Maghrib)}</td>
-                        <td>{cleanTimeStr(t?.Isha)}</td>
+                        <td className="cell-hijri">{hj ? `${hj.day} ${hj.month}` : '-'}</td>
+                        <td>{cleanTimeStr(t?.imsak)}</td>
+                        <td className="fajr-cell">{cleanTimeStr(t?.subuh)}</td>
+                        <td>{cleanTimeStr(t?.terbit)}</td>
+                        <td>{cleanTimeStr(t?.dzuhur)}</td>
+                        <td>{cleanTimeStr(t?.ashar)}</td>
+                        <td className="maghrib-cell">{cleanTimeStr(t?.maghrib)}</td>
+                        <td>{cleanTimeStr(t?.isya)}</td>
                       </tr>
                     )
                   })
@@ -1362,7 +1431,7 @@ function MiniAiTool() {
 // ─── Main Component ─────────────────────────────────────────────────────────
 
 export default function App() {
-  const [activeTool, setActiveTool] = useState('mini-ai') // 'gitlab-mr' | 'sholat' | 'mini-ai'
+  const [activeTool, setActiveTool] = useState('gitlab-mr') // 'gitlab-mr' | 'sholat' | 'mini-ai'
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [form, setForm] = useState(INITIAL_STATE)
   const [copied, setCopied] = useState(false)
@@ -1470,7 +1539,7 @@ export default function App() {
               >
                 <span className="nav-icon"><MosqueIcon /></span>
                 Jadwal Sholat
-                <span className="nav-badge" style={{ background: 'rgba(63, 185, 80, 0.15)', color: 'var(--accent-green)' }}>DKI Jakarta</span>
+                <span className="nav-badge" style={{ background: 'rgba(63, 185, 80, 0.15)', color: 'var(--accent-green)' }}>Kemenag RI</span>
               </button>
             </li>
           </ul>
@@ -1513,7 +1582,7 @@ export default function App() {
                   {activeTool === 'mini-ai'
                     ? 'Mini AI Dev Assistant'
                     : activeTool === 'sholat'
-                    ? 'Jadwal Sholat DKI Jakarta'
+                    ? 'Jadwal Sholat Kemenag RI'
                     : 'MR Description Generator'}
                 </h1>
                 <p>
