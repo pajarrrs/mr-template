@@ -1083,6 +1083,13 @@ function McpTab({ sync, project, onSyncNow }) {
             </button>
             <button
               type="button"
+              className={`prd-mcp-client-btn ${activeClient === 'antigravity' ? 'active' : ''}`}
+              onClick={() => setActiveClient('antigravity')}
+            >
+              🚀 Google Antigravity
+            </button>
+            <button
+              type="button"
               className={`prd-mcp-client-btn ${activeClient === 'claude' ? 'active' : ''}`}
               onClick={() => setActiveClient('claude')}
             >
@@ -1105,6 +1112,22 @@ function McpTab({ sync, project, onSyncNow }) {
                 <li>Di folder proyek Anda, buat file baru: <code>.cursor/mcp.json</code> (atau buka <b>Cursor Settings → Features → MCP</b>).</li>
                 <li>Salin konfigurasi JSON di bawah ini dan tempelkan ke file tersebut.</li>
                 <li>Simpan file. Cursor akan otomatis menghubungkan MCP Server (indikator hijau).</li>
+              </ol>
+            </div>
+          )}
+
+          {activeClient === 'antigravity' && (
+            <div style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+              <p><b>Cara pasang di Google Antigravity:</b></p>
+              <ol style={{ margin: '6px 0 10px 20px' }}>
+                <li>
+                  <b>Konfigurasi Global (Semua Project):</b> Buka atau buat file <code>~/.gemini/config/mcp_config.json</code> (di Windows: <code>%USERPROFILE%\.gemini\config\mcp_config.json</code>).
+                </li>
+                <li>
+                  <b>Atau Konfigurasi Per-Project:</b> Buat folder <code>.agents/</code> di root project Anda, lalu buat file <code>.agents/mcp_config.json</code>.
+                </li>
+                <li>Salin konfigurasi JSON di bawah ini dan tempelkan ke file tersebut.</li>
+                <li>Buka Antigravity, cek menu <b>Additional Options (...) → MCP Servers</b> untuk memastikan server <code>prd-studio</code> aktif dengan 7 tools.</li>
               </ol>
             </div>
           )}
