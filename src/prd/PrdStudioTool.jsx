@@ -107,6 +107,31 @@ function CopyButton({ text, label = 'Copy', className = '' }) {
   )
 }
 
+function SyncStatusBadge({ sync, isLocalDev }) {
+  const isOnline = sync.connected
+  const label = isOnline ? 'Connected' : sync.error ? 'Disconnected' : 'Connecting...'
+  return (
+    <span
+      className={`prd-status-badge ${isOnline ? 'connected' : sync.error ? 'disconnected' : 'connecting'}`}
+      title={
+        isOnline
+          ? `🟢 Connected (Live Sync 15s) ke ${sync.file || (isLocalDev ? 'Local Disk' : 'Vercel Cloud API')}${
+              sync.lastSync ? ` • Sync terakhir: ${sync.lastSync.toLocaleTimeString('id-ID')}` : ''
+            }`
+          : 'Sedang menghubungkan ke server...'
+      }
+    >
+      <span className="prd-status-dot" />
+      <span>{label}</span>
+      {isOnline && sync.lastSync && (
+        <span className="prd-status-time">
+          {sync.lastSync.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+        </span>
+      )}
+    </span>
+  )
+}
+
 // ─── Main Component ────────────────────────────────────────────────────────
 
 export default function PrdStudioTool({ apiKey, model, renderMarkdown }) {
@@ -126,7 +151,7 @@ export default function PrdStudioTool({ apiKey, model, renderMarkdown }) {
   const [error, setError] = useState(null)
   const [tab, setTab] = useState('prd')
   const [prdView, setPrdView] = useState('preview')
-  const [sync, setSync] = useState({ available: false, file: '', mcpServer: '', lastSync: null, error: null })
+  const [sync, setSync] = useState({ available: false, connected: false, file: '', mcpServer: '', lastSync: null, error: null })
   const projectRef = useRef(project)
   projectRef.current = project
 
@@ -153,7 +178,7 @@ export default function PrdStudioTool({ apiKey, model, renderMarkdown }) {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`)
-      setSync((s) => ({ ...s, available: true, liveLongPoll: true, file: data.file, lastSync: new Date(), error: null }))
+      setSync((s) => ({ ...s, available: true, connected: true, liveLongPoll: true, file: data.file, lastSync: new Date(), error: null }))
       return normalizeProject(data.project)
     } catch (err) {
       setSync((s) => ({ ...s, error: err.message }))
@@ -182,6 +207,7 @@ export default function PrdStudioTool({ apiKey, model, renderMarkdown }) {
           setSync((s) => ({
             ...s,
             available: true,
+            connected: true,
             liveLongPoll: true,
             isCloud: data.isCloud || !isLocalDev,
             file: data.file || (isLocalDev ? 'Local Disk' : 'Cloud Session (Vercel)'),
@@ -212,8 +238,9 @@ export default function PrdStudioTool({ apiKey, model, renderMarkdown }) {
           if (!active || err.name === 'AbortError') break
           setSync((s) => ({
             ...s,
+            connected: false,
             liveLongPoll: false,
-            error: null,
+            error: err.message,
           }))
           // Wait 3s before retrying upon network/server interruption
           await new Promise((r) => setTimeout(r, 3000))
@@ -434,18 +461,19 @@ export default function PrdStudioTool({ apiKey, model, renderMarkdown }) {
       <section className="panel prd-generator">
         <div className="panel-header">
           <span className="panel-title">✦ Apa yang ingin kamu bangun?</span>
-          <span
-            className={`prd-sync-pill ${sync.available ? 'on' : isLocalDev ? 'off' : 'cloud'}`}
-            title={
-              isLocalDev
-                ? (sync.available ? `Tersimpan di ${sync.file}` : 'Jalankan via npm run dev untuk sync otomatis ke file disk')
-                : 'Berjalan di Vercel Cloud: Dokumen tersimpan aman di browser Anda.'
-            }
-          >
-            {isLocalDev
-              ? (sync.available ? '● Local MCP Sync aktif' : '○ Sync offline')
-              : '☁️ Cloud Mode (Vercel)'}
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <SyncStatusBadge sync={sync} isLocalDev={isLocalDev} />
+            <span
+              className={`prd-sync-pill ${sync.connected ? 'on' : isLocalDev ? 'off' : 'cloud'}`}
+              title={
+                isLocalDev
+                  ? (sync.available ? `Tersimpan di ${sync.file}` : 'Jalankan via npm run dev untuk sync otomatis ke file disk')
+                  : 'Berjalan di Vercel Cloud: Terhubung ke Server API'
+              }
+            >
+              {isLocalDev ? 'Local Disk' : 'Vercel Cloud'}
+            </span>
+          </div>
         </div>
         <div className="panel-body">
           <textarea
@@ -542,7 +570,10 @@ export default function PrdStudioTool({ apiKey, model, renderMarkdown }) {
         <section className="panel prd-result">
           <div className="prd-result-head">
             <div>
-              <h2>{project.meta.name}</h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '4px' }}>
+                <h2>{project.meta.name}</h2>
+                <SyncStatusBadge sync={sync} isLocalDev={isLocalDev} />
+              </div>
               <p>{project.meta.summary}</p>
             </div>
             <div className="prd-progress" title={`${stats.done}/${stats.total} task selesai`}>
@@ -561,7 +592,10 @@ export default function PrdStudioTool({ apiKey, model, renderMarkdown }) {
               </button>
             ))}
             <div className="prd-tabs-spacer" />
-            <button type="button" className="prd-btn ghost" onClick={handleClear}>Reset</button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <SyncStatusBadge sync={sync} isLocalDev={isLocalDev} />
+              <button type="button" className="prd-btn ghost" onClick={handleClear}>Reset</button>
+            </div>
           </div>
 
           <div className="prd-tab-body">
