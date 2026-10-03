@@ -21,8 +21,10 @@ export default function handler(req, res) {
   const longpoll = url.searchParams.get('longpoll')
 
   if (req.method === 'GET') {
-    // If long polling is requested and memoryStore hasn't been updated since 'since'
-    if (longpoll && since && memoryStore && (memoryStore.updatedAt || '') <= since) {
+    const hasNewUpdate = memoryStore && memoryStore.updatedAt && memoryStore.updatedAt > (since || '')
+
+    // If long polling is requested and there are no newer updates, hold the connection for 15 seconds
+    if (longpoll && !hasNewUpdate) {
       let timer = null
       const onUpdate = (proj) => {
         if (timer) clearTimeout(timer)

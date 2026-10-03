@@ -55,9 +55,10 @@ function prdSyncPlugin() {
 
           if (req.method === 'GET') {
             const current = readProject()
+            const hasNewUpdate = current && current.updatedAt && current.updatedAt > (since || '')
 
-            // If client asks for long polling and local project is not newer than 'since'
-            if (longpoll && since && current && (current.updatedAt || '') <= since) {
+            // If client asks for long polling and there are no newer updates, hold the connection for 15 seconds
+            if (longpoll && !hasNewUpdate) {
               let timer = null
               const onUpdate = (payload) => {
                 if (timer) clearTimeout(timer)

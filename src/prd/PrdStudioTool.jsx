@@ -189,6 +189,7 @@ export default function PrdStudioTool({ apiKey, model, renderMarkdown }) {
             error: null,
           }))
 
+          let didUpdate = false
           if (data.project) {
             const remote = normalizeProject(data.project)
             const local = projectRef.current
@@ -196,12 +197,16 @@ export default function PrdStudioTool({ apiKey, model, renderMarkdown }) {
             if (!local || remote.id !== local.id || (remote.updatedAt || '') > (local?.updatedAt || '')) {
               setProject(remote)
               setSync((s) => ({ ...s, lastSync: new Date() }))
+              didUpdate = true
             }
           }
 
-          // If timeout, immediately loop back; if an immediate update arrived, pause 150ms before next long-poll
-          if (!data.timeout) {
-            await new Promise((r) => setTimeout(r, 150))
+          // If the server returned an immediate response without new data and without timeout flag,
+          // wait 15 seconds so it never hammers the server in a tight loop!
+          if (!didUpdate && !data.timeout) {
+            await new Promise((r) => setTimeout(r, 15000))
+          } else if (didUpdate) {
+            await new Promise((r) => setTimeout(r, 200))
           }
         } catch (err) {
           if (!active || err.name === 'AbortError') break
