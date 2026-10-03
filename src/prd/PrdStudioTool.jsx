@@ -138,18 +138,22 @@ export default function PrdStudioTool({ apiKey, model, renderMarkdown }) {
     if (project) localStorage.setItem(LS_KEY, JSON.stringify(project))
   }, [project])
 
-  // ── File sync (Vite dev middleware ↔ .prd/project.json ↔ MCP server) ──
+  // ── File sync with Long-Polling (Vite dev middleware OR Vercel API ↔ MCP server) ──
 
   const pushToServer = useCallback(async (p) => {
     try {
+      const payload = {
+        ...p,
+        syncUrl: p.syncUrl || (typeof window !== 'undefined' ? `${window.location.origin}/api/prd` : ''),
+      }
       const res = await fetch('/api/prd', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(p),
+        body: JSON.stringify(payload),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`)
-      setSync((s) => ({ ...s, available: true, file: data.file, lastSync: new Date(), error: null }))
+      setSync((s) => ({ ...s, available: true, liveLongPoll: true, file: data.file, lastSync: new Date(), error: null }))
       return normalizeProject(data.project)
     } catch (err) {
       setSync((s) => ({ ...s, error: err.message }))
@@ -157,45 +161,68 @@ export default function PrdStudioTool({ apiKey, model, renderMarkdown }) {
     }
   }, [])
 
-  const pullFromServer = useCallback(async () => {
-    try {
-      const res = await fetch('/api/prd')
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const data = await res.json()
-      setSync((s) => ({
-        ...s,
-        available: true,
-        isCloud: data.isCloud || !isLocalDev,
-        file: data.file || (isLocalDev ? 'Local Disk' : 'Cloud Session (Vercel)'),
-        mcpServer: data.mcpServer || s.mcpServer,
-        error: null,
-      }))
-      if (!data.project) return
-      const remote = normalizeProject(data.project)
-      const local = projectRef.current
-      // Remote wins if it is a different project or has newer edits (e.g. AI agent moved a card).
-      if (!local || remote.id !== local.id || remote.updatedAt > local.updatedAt) {
-        setProject(remote)
-        setSync((s) => ({ ...s, lastSync: new Date() }))
+  useEffect(() => {
+    let active = true
+    const controller = new AbortController()
+
+    const longPollLoop = async () => {
+      while (active) {
+        try {
+          const currentProj = projectRef.current
+          const since = currentProj?.updatedAt
+          const query = since ? `?since=${encodeURIComponent(since)}&longpoll=1` : '?longpoll=1'
+
+          const res = await fetch(`/api/prd${query}`, {
+            signal: controller.signal,
+          })
+          if (!res.ok) throw new Error(`HTTP ${res.status}`)
+          const data = await res.json()
+          if (!active) break
+
+          setSync((s) => ({
+            ...s,
+            available: true,
+            liveLongPoll: true,
+            isCloud: data.isCloud || !isLocalDev,
+            file: data.file || (isLocalDev ? 'Local Disk' : 'Cloud Session (Vercel)'),
+            mcpServer: data.mcpServer || s.mcpServer,
+            error: null,
+          }))
+
+          if (data.project) {
+            const remote = normalizeProject(data.project)
+            const local = projectRef.current
+            // Remote wins if it is a different project or has newer edits (e.g. AI agent moved a card).
+            if (!local || remote.id !== local.id || (remote.updatedAt || '') > (local?.updatedAt || '')) {
+              setProject(remote)
+              setSync((s) => ({ ...s, lastSync: new Date() }))
+            }
+          }
+
+          // If timeout, immediately loop back; if an immediate update arrived, pause 150ms before next long-poll
+          if (!data.timeout) {
+            await new Promise((r) => setTimeout(r, 150))
+          }
+        } catch (err) {
+          if (!active || err.name === 'AbortError') break
+          setSync((s) => ({
+            ...s,
+            liveLongPoll: false,
+            error: null,
+          }))
+          // Wait 3s before retrying upon network/server interruption
+          await new Promise((r) => setTimeout(r, 3000))
+        }
       }
-    } catch {
-      setSync((s) => ({
-        ...s,
-        available: false,
-        isCloud: !isLocalDev,
-        file: !isLocalDev ? 'Browser Storage' : '',
-        error: null,
-      }))
+    }
+
+    longPollLoop()
+
+    return () => {
+      active = false
+      controller.abort()
     }
   }, [])
-
-  useEffect(() => {
-    pullFromServer()
-    if (isLocalDev) {
-      const t = setInterval(pullFromServer, POLL_MS)
-      return () => clearInterval(t)
-    }
-  }, [pullFromServer])
 
   // Every local edit goes through commit() so updatedAt + sync stay consistent.
   const commit = useCallback(
@@ -204,6 +231,9 @@ export default function PrdStudioTool({ apiKey, model, renderMarkdown }) {
       if (!base) return
       const next = typeof updater === 'function' ? updater(structuredClone(base)) : updater
       next.updatedAt = new Date().toISOString()
+      if (!next.syncUrl && typeof window !== 'undefined') {
+        next.syncUrl = `${window.location.origin}/api/prd`
+      }
       setProject(next)
       if (sync.available) {
         const saved = await pushToServer(next)
@@ -596,7 +626,16 @@ function PrdTab({ markdown, project, issues, view, setView, renderMarkdown }) {
         <div className="prd-toolbar-actions">
           <CopyButton text={markdown} label="Copy Markdown" />
           <button type="button" className="prd-btn" onClick={() => downloadFile('PRD.md', markdown)}>Download PRD.md</button>
-          <button type="button" className="prd-btn" onClick={() => downloadFile('project.json', JSON.stringify(project, null, 2), 'application/json')}>Download JSON</button>
+          <button
+            type="button"
+            className="prd-btn"
+            onClick={() => {
+              const pWithSync = { ...project, syncUrl: project?.syncUrl || (typeof window !== 'undefined' ? `${window.location.origin}/api/prd` : '') }
+              downloadFile('project.json', JSON.stringify(pWithSync, null, 2), 'application/json')
+            }}
+          >
+            Download JSON
+          </button>
         </div>
       </div>
       {issues.length > 0 && (
@@ -1002,15 +1041,15 @@ function McpTab({ sync, project, onSyncNow }) {
   return (
     <div className="prd-mcp">
       {/* Status banner */}
-      <div className={`prd-alert ${isLocalDev && sync.available ? 'ok' : 'warn'}`}>
-        {isLocalDev && sync.available ? (
+      <div className={`prd-alert ${sync.available ? 'ok' : 'warn'}`}>
+        {sync.available ? (
           <>
-            <strong>● Mode Lokal Aktif:</strong> MCP terhubung langsung ke file disk <code>{prdFile}</code>. Setiap perubahan status task oleh AI agent akan otomatis menggeser kartu di Kanban board web ini.
-            {sync.lastSync && <> (Terakhir sync: {sync.lastSync.toLocaleTimeString('id-ID')})</>}
+            <strong>🟢 Live Sync (Long-Polling) Aktif:</strong> {isLocalDev ? `Terhubung ke disk ${prdFile}` : 'Terhubung ke Cloud API (Vercel)'}. Setiap AI agent mengupdate task via MCP, perubahan status kartu dan persentase progress akan langsung tersinkronisasi secara real-time!
+            {sync.lastSync && <> (Sync terakhir: {sync.lastSync.toLocaleTimeString('id-ID')})</>}
           </>
         ) : (
           <>
-            <strong>☁️ Mode Cloud (Vercel) / Multi-User:</strong> PRD tersimpan aman di browser Anda. Siapa pun (termasuk tim Anda di komputer lain) dapat menggunakan MCP ini tanpa perlu meng-clone repository! Ikuti panduan 4 langkah mudah di bawah.
+            <strong>☁️ Mode Cloud (Vercel) / Multi-User:</strong> PRD tersimpan aman di browser Anda. Siapa pun (termasuk tim Anda di komputer lain) dapat menggunakan MCP ini tanpa perlu meng-clone repository!
           </>
         )}
       </div>
@@ -1022,12 +1061,12 @@ function McpTab({ sync, project, onSyncNow }) {
             <div className="prd-mcp-step-badge">1</div>
             <div>
               <h4 className="prd-mcp-step-title">Simpan File PRD ke Folder Proyek Coding Anda</h4>
-              <p className="prd-mcp-step-sub">MCP server membaca requirement & task dari file ini.</p>
+              <p className="prd-mcp-step-sub">MCP server membaca requirement & task dari file ini dan otomatis mensinkronkan progress ke web.</p>
             </div>
           </div>
 
           <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-            Download file <code>project.json</code> di bawah ini, lalu letakkan di root folder tempat Anda menulis kode (misalnya di <code>my-chat-app/project.json</code>).
+            Download file <code>project.json</code> di bawah ini, lalu letakkan di root folder tempat Anda menulis kode (misalnya di <code>my-chat-app/project.json</code>). File ini sudah dilengkapi URL sinkronisasi otomatis.
           </p>
 
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -1035,7 +1074,11 @@ function McpTab({ sync, project, onSyncNow }) {
               type="button"
               className="prd-btn primary"
               disabled={!project}
-              onClick={() => project && downloadFile('project.json', JSON.stringify(project, null, 2), 'application/json')}
+              onClick={() => {
+                if (!project) return
+                const pWithSync = { ...project, syncUrl: project?.syncUrl || (typeof window !== 'undefined' ? `${window.location.origin}/api/prd` : '') }
+                downloadFile('project.json', JSON.stringify(pWithSync, null, 2), 'application/json')
+              }}
             >
               ⬇️ Download project.json
             </button>

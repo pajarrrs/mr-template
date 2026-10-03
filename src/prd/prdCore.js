@@ -224,6 +224,7 @@ export function normalizeProject(input, request = '') {
   return {
     version: 1,
     id: asStr(src.id) || `prd_${Date.now().toString(36)}`,
+    syncUrl: asStr(src.syncUrl),
     request: asStr(src.request, request),
     createdAt: asStr(src.createdAt, now),
     updatedAt: asStr(src.updatedAt, now),

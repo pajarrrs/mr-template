@@ -42,5 +42,16 @@ export function writeProject(project, { touch = true } = {}) {
   fs.writeFileSync(tmp, JSON.stringify(normalized, null, 2), 'utf8')
   fs.renameSync(tmp, file)
   fs.writeFileSync(path.join(path.dirname(file), 'PRD.md'), buildPrdMarkdown(normalized), 'utf8')
+
+  // Asynchronous background sync to server (Vercel cloud or local dev server)
+  const syncUrl = process.env.PRD_SYNC_URL || normalized.syncUrl
+  if (syncUrl && typeof fetch === 'function') {
+    fetch(syncUrl, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(normalized),
+    }).catch(() => {})
+  }
+
   return normalized
 }

@@ -1,5 +1,6 @@
-// Vercel Serverless Function for /api/prd
+// Vercel Serverless Function for /api/prd with Long-Polling support
 let memoryStore = null
+const subscribers = new Set()
 
 export default function handler(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', 'true')
@@ -15,7 +16,46 @@ export default function handler(req, res) {
     return
   }
 
+  const url = new URL(req.url, `https://${req.headers.host || 'localhost'}`)
+  const since = url.searchParams.get('since')
+  const longpoll = url.searchParams.get('longpoll')
+
   if (req.method === 'GET') {
+    // If long polling is requested and memoryStore hasn't been updated since 'since'
+    if (longpoll && since && memoryStore && (memoryStore.updatedAt || '') <= since) {
+      let timer = null
+      const onUpdate = (proj) => {
+        if (timer) clearTimeout(timer)
+        res.status(200).json({
+          available: true,
+          isCloud: true,
+          file: 'Cloud Session (Vercel)',
+          project: proj,
+          message: 'Update diterima via live long-polling.'
+        })
+      }
+
+      subscribers.add(onUpdate)
+
+      // Vercel serverless functions have execution limits; 9s timeout keeps it responsive and within limits
+      timer = setTimeout(() => {
+        subscribers.delete(onUpdate)
+        res.status(200).json({
+          available: true,
+          isCloud: true,
+          file: 'Cloud Session (Vercel)',
+          project: memoryStore,
+          timeout: true
+        })
+      }, 9000)
+
+      req.on('close', () => {
+        if (timer) clearTimeout(timer)
+        subscribers.delete(onUpdate)
+      })
+      return
+    }
+
     return res.status(200).json({
       available: true,
       isCloud: true,
@@ -29,6 +69,15 @@ export default function handler(req, res) {
     try {
       const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || null)
       memoryStore = body
+
+      // Flush all waiting long-poll connections immediately!
+      for (const sub of subscribers) {
+        try {
+          sub(memoryStore)
+        } catch {}
+      }
+      subscribers.clear()
+
       return res.status(200).json({
         available: true,
         isCloud: true,
