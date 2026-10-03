@@ -10,7 +10,20 @@ import { buildPrdMarkdown, normalizeProject } from '../src/prd/prdCore.js'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
-export function getPrdFile() {
+let activeOverrideFile = null
+
+export function setActivePrdFile(filePath) {
+  if (filePath) {
+    activeOverrideFile = path.resolve(filePath)
+    return activeOverrideFile
+  }
+  return null
+}
+
+export function getPrdFile(customPath) {
+  if (customPath) return path.resolve(customPath)
+  if (activeOverrideFile) return activeOverrideFile
+
   const fromEnv = process.env.PRD_FILE
   if (fromEnv) return path.resolve(fromEnv)
 
@@ -25,16 +38,16 @@ export function getPrdFile() {
   return path.join(ROOT, '.prd', 'project.json')
 }
 
-export function readProject() {
-  const file = getPrdFile()
+export function readProject(customPath) {
+  const file = getPrdFile(customPath)
   if (!fs.existsSync(file)) return null
   const raw = fs.readFileSync(file, 'utf8')
   if (!raw.trim()) return null
   return normalizeProject(JSON.parse(raw))
 }
 
-export function writeProject(project, { touch = true } = {}) {
-  const file = getPrdFile()
+export function writeProject(project, { touch = true, customPath } = {}) {
+  const file = getPrdFile(customPath)
   const normalized = normalizeProject(project)
   if (touch) normalized.updatedAt = new Date().toISOString()
   fs.mkdirSync(path.dirname(file), { recursive: true })

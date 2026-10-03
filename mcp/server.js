@@ -9,7 +9,7 @@
 // Usage:  node mcp/server.js            (reads .prd/project.json)
 //         PRD_FILE=/path/project.json node mcp/server.js
 
-import { readProject, writeProject, getPrdFile } from './store.js'
+import { readProject, writeProject, getPrdFile, setActivePrdFile } from './store.js'
 import {
   TASK_STATUSES,
   STATUS_LABELS,
@@ -148,6 +148,24 @@ const TOOLS = [
       t.updatedAt = now
       writeProject(p)
       return text(`Note added to ${id}.`)
+    },
+  },
+  {
+    name: 'set_project_file',
+    description: 'Switch the active project file to a specific path (e.g. "d:/code/Fintrack/project.json"). Use this whenever working in a different workspace or project directory.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        path: { type: 'string', description: 'Absolute or relative path to project.json' },
+      },
+      required: ['path'],
+      additionalProperties: false,
+    },
+    handler: ({ path: filePath }) => {
+      const resolved = setActivePrdFile(filePath)
+      const p = readProject()
+      if (!p) throw new Error(`File not found or invalid JSON at: ${resolved}`)
+      return text(`Active project switched to "${p.meta?.name || 'Untitled'}" (${p.id}) at ${resolved}. ${p.tasks.length} tasks loaded.`)
     },
   },
 ]
