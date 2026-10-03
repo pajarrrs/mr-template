@@ -1,0 +1,13 @@
+{
+  "framework": "vite",
+  "rewrites": [
+    {
+      "source": "/api/prd",
+      "destination": "/api/prd.js"
+    },
+    {
+      "source": "/((?!assets/|favicon|.*\\..*).*)",
+      "destination": "/index.html"
+    }
+  ]
+}

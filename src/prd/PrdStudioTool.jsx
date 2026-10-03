@@ -36,6 +36,19 @@ const TABS = [
   { id: 'mcp', label: 'MCP' },
 ]
 
+const RECOMMENDED_MODELS = [
+  { id: 'openrouter/free', label: 'Auto Free' },
+  { id: 'google/gemini-2.0-flash-exp:free', label: '⚡ Gemini 2.0 Flash (Anti-Limit)' },
+  { id: 'meta-llama/llama-3.3-70b-instruct:free', label: '🧠 Llama 3.3 70B' },
+  { id: 'qwen/qwen-2.5-coder-32b-instruct:free', label: '💻 Qwen 2.5 Coder 32B' },
+]
+
+const isLocalDev = typeof window !== 'undefined' && (
+  window.location.hostname === 'localhost' ||
+  window.location.hostname === '127.0.0.1' ||
+  window.location.hostname.endsWith('.local')
+)
+
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
 function loadLocal() {
@@ -147,9 +160,16 @@ export default function PrdStudioTool({ apiKey, model, renderMarkdown }) {
   const pullFromServer = useCallback(async () => {
     try {
       const res = await fetch('/api/prd')
-      if (!res.ok || !(res.headers.get('content-type') || '').includes('json')) throw new Error('Sync API tidak tersedia')
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
-      setSync((s) => ({ ...s, available: true, file: data.file, mcpServer: data.mcpServer || s.mcpServer, error: null }))
+      setSync((s) => ({
+        ...s,
+        available: true,
+        isCloud: data.isCloud || !isLocalDev,
+        file: data.file || (isLocalDev ? 'Local Disk' : 'Cloud Session (Vercel)'),
+        mcpServer: data.mcpServer || s.mcpServer,
+        error: null,
+      }))
       if (!data.project) return
       const remote = normalizeProject(data.project)
       const local = projectRef.current
@@ -159,14 +179,22 @@ export default function PrdStudioTool({ apiKey, model, renderMarkdown }) {
         setSync((s) => ({ ...s, lastSync: new Date() }))
       }
     } catch {
-      setSync((s) => ({ ...s, available: false }))
+      setSync((s) => ({
+        ...s,
+        available: false,
+        isCloud: !isLocalDev,
+        file: !isLocalDev ? 'Browser Storage' : '',
+        error: null,
+      }))
     }
   }, [])
 
   useEffect(() => {
     pullFromServer()
-    const t = setInterval(pullFromServer, POLL_MS)
-    return () => clearInterval(t)
+    if (isLocalDev) {
+      const t = setInterval(pullFromServer, POLL_MS)
+      return () => clearInterval(t)
+    }
   }, [pullFromServer])
 
   // Every local edit goes through commit() so updatedAt + sync stay consistent.
@@ -191,6 +219,7 @@ export default function PrdStudioTool({ apiKey, model, renderMarkdown }) {
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), AI_TIMEOUT_MS)
     try {
+      const selectedModel = modelOverride.trim() || model
       const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         signal: controller.signal,
@@ -201,20 +230,23 @@ export default function PrdStudioTool({ apiKey, model, renderMarkdown }) {
           'X-Title': 'PRD & Kanban Studio',
         },
         body: JSON.stringify({
-          model: modelOverride.trim() || model,
+          model: selectedModel,
           messages,
           response_format: { type: 'json_object' },
-          temperature: 0.3,
-          max_tokens: 16000,
-          reasoning: { effort: 'low', exclude: true },
+          temperature: 0.2,
+          max_tokens: 8192,
         }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data?.error?.message || `HTTP ${res.status}`)
       const choice = data?.choices?.[0]
-      // Some reasoning models put everything in `reasoning` and leave content empty.
-      const content = choice?.message?.content || choice?.message?.reasoning || ''
-      if (!content && choice?.finish_reason === 'length') throw new Error('Output AI terpotong (token limit). Coba lagi atau gunakan model lain.')
+      let content = choice?.message?.content || ''
+      if (!content && choice?.message?.reasoning) {
+        content = choice.message.reasoning
+      }
+      if (!content && choice?.finish_reason === 'length') {
+        throw new Error('Model AI kehabisan token saat berpikir. Silakan pilih model "Gemini 2.0 Flash" pada menu Model di atas untuk hasil instan tanpa limit.')
+      }
       return content
     } catch (err) {
       if (err.name === 'AbortError') throw new Error('AI terlalu lama merespons (timeout). Coba lagi atau ganti model.')
@@ -367,8 +399,17 @@ export default function PrdStudioTool({ apiKey, model, renderMarkdown }) {
       <section className="panel prd-generator">
         <div className="panel-header">
           <span className="panel-title">✦ Apa yang ingin kamu bangun?</span>
-          <span className={`prd-sync-pill ${sync.available ? 'on' : 'off'}`} title={sync.file || 'Jalankan via `npm run dev` untuk sync ke MCP'}>
-            {sync.available ? '● MCP Sync aktif' : '○ Sync offline'}
+          <span
+            className={`prd-sync-pill ${sync.available ? 'on' : isLocalDev ? 'off' : 'cloud'}`}
+            title={
+              isLocalDev
+                ? (sync.available ? `Tersimpan di ${sync.file}` : 'Jalankan via npm run dev untuk sync otomatis ke file disk')
+                : 'Berjalan di Vercel Cloud: Dokumen tersimpan aman di browser Anda.'
+            }
+          >
+            {isLocalDev
+              ? (sync.available ? '● Local MCP Sync aktif' : '○ Sync offline')
+              : '☁️ Cloud Mode (Vercel)'}
           </span>
         </div>
         <div className="panel-body">
@@ -414,10 +455,31 @@ export default function PrdStudioTool({ apiKey, model, renderMarkdown }) {
             </button>
           </div>
           {showAdvanced && (
-            <div className="prd-gen-row">
+            <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Rekomendasi Model:</span>
+                {RECOMMENDED_MODELS.map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    className="ai-preset-chip"
+                    style={{
+                      background: (modelOverride.trim() || model) === m.id ? 'rgba(137, 87, 229, 0.25)' : undefined,
+                      borderColor: (modelOverride.trim() || model) === m.id ? '#8957e5' : undefined,
+                      color: (modelOverride.trim() || model) === m.id ? '#d2a8ff' : undefined,
+                    }}
+                    onClick={() => {
+                      setModelOverride(m.id)
+                      localStorage.setItem(LS_MODEL_KEY, m.id)
+                    }}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
               <input
                 className="input"
-                placeholder={`Model OpenRouter (default: ${model}) – mis. google/gemini-2.0-flash-exp:free`}
+                placeholder={`Custom Model ID (default: ${model})`}
                 value={modelOverride}
                 onChange={(e) => {
                   setModelOverride(e.target.value)

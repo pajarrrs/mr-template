@@ -74,12 +74,12 @@ export function buildPrdSystemPrompt() {
     'The JSON MUST follow this exact shape:',
     PRD_JSON_SCHEMA_HINT,
     'Rules:',
-    '- Everything must be specific to the user request. No generic filler.',
-    '- 5-10 features, each with 2-4 Given/When/Then acceptance criteria.',
-    '- Database: every table needs a primary key; foreign keys use "table.column" and must reference existing tables.',
-    '- 3-6 steps (phases) ordered from foundation to polish.',
-    '- 10-25 tasks, ordered by dependency, each referencing an existing phase number and feature ids.',
-    '- outOfScope must list things an AI coding agent might be tempted to build but must NOT.',
+    '- Keep descriptions concise, sharp, and high-signal (avoid verbose fluff so output stays well under token limits).',
+    '- 4-6 core features, each with 2 clear Given/When/Then acceptance criteria.',
+    '- Database: 3-5 essential tables. Every table needs a primary key; foreign keys use "table.column" and must reference existing tables.',
+    '- 3-4 steps (phases) ordered from foundation to polish.',
+    '- 8-12 concrete tasks, ordered by dependency, each referencing an existing phase number and feature ids.',
+    '- outOfScope: 3-5 items explicitly NOT to be built.',
     '- Use the same language as the user request for descriptions; keep identifiers (table/column/ids) in English snake_case.',
   ].join('\n')
 }
@@ -91,6 +91,40 @@ export function buildPrdUserPrompt(request, techStack) {
 
 // ─── JSON extraction / normalization ───────────────────────────────────────
 
+export function repairTruncatedJson(str) {
+  let cleaned = str.trim()
+  // Ensure unclosed string literal is closed
+  const quotes = (cleaned.match(/(?<!\\)"/g) || []).length
+  if (quotes % 2 !== 0) {
+    cleaned += '"'
+  }
+  // Remove trailing dangling commas or colons
+  cleaned = cleaned.replace(/,\s*$/, '').replace(/:\s*$/, ': null')
+
+  // Track unclosed brackets/braces
+  const stack = []
+  let inString = false
+  for (let i = 0; i < cleaned.length; i++) {
+    const ch = cleaned[i]
+    if (ch === '"' && (i === 0 || cleaned[i - 1] !== '\\')) {
+      inString = !inString
+    } else if (!inString) {
+      if (ch === '{' || ch === '[') stack.push(ch)
+      else if (ch === '}' && stack[stack.length - 1] === '{') stack.pop()
+      else if (ch === ']' && stack[stack.length - 1] === '[') stack.pop()
+    }
+  }
+
+  // Close remaining unclosed braces in reverse order
+  while (stack.length > 0) {
+    const last = stack.pop()
+    if (last === '{') cleaned += '}'
+    else if (last === '[') cleaned += ']'
+  }
+
+  return cleaned
+}
+
 export function extractJson(raw) {
   if (!raw) throw new Error('AI tidak mengembalikan konten.')
   let text = String(raw)
@@ -98,14 +132,27 @@ export function extractJson(raw) {
     .replace(/```(?:json)?/gi, '')
     .trim()
   const start = text.indexOf('{')
+  if (start === -1) throw new Error('Respons AI tidak mengandung JSON.')
+  
   const end = text.lastIndexOf('}')
-  if (start === -1 || end <= start) throw new Error('Respons AI bukan JSON yang valid.')
-  text = text.slice(start, end + 1)
+  let candidate = end > start ? text.slice(start, end + 1) : text.slice(start)
+
+  // 1. Direct parse
   try {
-    return JSON.parse(text)
+    return JSON.parse(candidate)
+  } catch {}
+
+  // 2. Trailing comma cleanup
+  try {
+    return JSON.parse(candidate.replace(/,\s*([}\]])/g, '$1'))
+  } catch {}
+
+  // 3. Auto-repair truncated JSON
+  try {
+    const repaired = repairTruncatedJson(candidate)
+    return JSON.parse(repaired)
   } catch {
-    // Common LLM slip: trailing commas.
-    return JSON.parse(text.replace(/,\s*([}\]])/g, '$1'))
+    throw new Error('Respons AI bukan format JSON yang valid atau terpotong terlalu parah.')
   }
 }
 
