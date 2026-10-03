@@ -12,7 +12,17 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
 export function getPrdFile() {
   const fromEnv = process.env.PRD_FILE
-  return fromEnv ? path.resolve(fromEnv) : path.join(ROOT, '.prd', 'project.json')
+  if (fromEnv) return path.resolve(fromEnv)
+
+  // 1. Check process.cwd() (if AI agent is opened in another project folder)
+  const cwdPrd = path.join(process.cwd(), '.prd', 'project.json')
+  if (fs.existsSync(cwdPrd)) return cwdPrd
+
+  const cwdDirect = path.join(process.cwd(), 'project.json')
+  if (fs.existsSync(cwdDirect)) return cwdDirect
+
+  // 2. Default fallback inside this repo
+  return path.join(ROOT, '.prd', 'project.json')
 }
 
 export function readProject() {

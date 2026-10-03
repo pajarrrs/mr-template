@@ -968,10 +968,20 @@ const MCP_TOOLS = [
 ]
 
 function McpTab({ sync, onSyncNow }) {
-  const serverPath = (sync.mcpServer || 'D:/code/prdin/mr-template/mcp/server.js').replace(/\\/g, '/')
-  const prdFile = (sync.file || '').replace(/\\/g, '/')
+  const serverPath = isLocalDev && sync.mcpServer
+    ? sync.mcpServer.replace(/\\/g, '/')
+    : './mcp/server.js'
+  const prdFile = isLocalDev && sync.file ? sync.file.replace(/\\/g, '/') : ''
   const config = JSON.stringify(
-    { mcpServers: { 'prd-studio': { command: 'node', args: [serverPath], ...(prdFile ? { env: { PRD_FILE: prdFile } } : {}) } } },
+    {
+      mcpServers: {
+        'prd-studio': {
+          command: 'node',
+          args: [serverPath],
+          ...(prdFile ? { env: { PRD_FILE: prdFile } } : {})
+        }
+      }
+    },
     null,
     2
   )
@@ -980,18 +990,21 @@ function McpTab({ sync, onSyncNow }) {
 
   return (
     <div className="prd-mcp">
-      <div className={`prd-alert ${sync.available ? 'ok' : 'warn'}`}>
-        {sync.available ? (
+      <div className={`prd-alert ${sync.available && isLocalDev ? 'ok' : 'warn'}`}>
+        {isLocalDev && sync.available ? (
           <>
-            <strong>Sync aktif.</strong> PRD tersimpan di <code>{prdFile}</code> (+ <code>PRD.md</code> di folder yang sama). Kanban otomatis refresh tiap 3 detik saat AI agent mengupdate task.
+            <strong>Sync lokal aktif.</strong> PRD tersimpan di <code>{prdFile}</code> (+ <code>PRD.md</code> di folder yang sama). Kanban otomatis refresh tiap 3 detik saat AI agent mengupdate task.
             {sync.lastSync && <> Terakhir sync: {sync.lastSync.toLocaleTimeString('id-ID')}.</>}
           </>
         ) : (
           <>
-            <strong>Sync offline.</strong> Jalankan app dengan <code>npm run dev</code> agar PRD tersimpan ke file yang dibaca MCP server. Alternatif: Download JSON lalu set <code>PRD_FILE</code> ke file tersebut.
+            <strong>Mode Cloud / Multi-User:</strong> PRD tersimpan aman di browser Anda. Agar AI agent (Cursor / Claude Desktop) di laptop Anda bisa membaca PRD ini:
+            <ol style={{ marginTop: '6px', marginLeft: '18px' }}>
+              <li>Klik tab <b>PRD</b> → <b>Download JSON</b> (simpan sebagai <code>project.json</code> di root proyek coding Anda).</li>
+              <li>Jalankan MCP server di bawah ini. MCP akan otomatis mendeteksi <code>project.json</code> di folder proyek Anda.</li>
+            </ol>
           </>
         )}
-        {sync.error && <div>Error terakhir: {sync.error}</div>}
       </div>
       {sync.available && (
         <button type="button" className="prd-btn primary" onClick={onSyncNow}>Sync ke MCP sekarang</button>
