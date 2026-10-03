@@ -109,24 +109,39 @@ function CopyButton({ text, label = 'Copy', className = '' }) {
 
 function SyncStatusBadge({ sync, syncing, onSync, isLocalDev }) {
   const isOnline = sync.connected
-  const label = syncing ? 'Syncing...' : isOnline ? 'Synced' : sync.error ? 'Offline' : 'Ready'
+  const label = syncing
+    ? 'Memeriksa…'
+    : sync.statusText || (isOnline ? 'Up to date' : 'Belum sync')
+
+  const badgeType = syncing
+    ? 'connecting'
+    : sync.hasNewUpdate
+    ? 'connected'
+    : isOnline
+    ? 'connected'
+    : 'disconnected'
+
   return (
-    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
       <span
-        className={`prd-status-badge ${syncing ? 'connecting' : isOnline ? 'connected' : 'disconnected'}`}
+        className={`prd-status-badge ${badgeType}`}
         title={
           isOnline
-            ? `🟢 Terhubung ke ${sync.file || (isLocalDev ? 'Local Disk' : 'Vercel API')}${
-                sync.lastSync ? ` • Terakhir sync: ${sync.lastSync.toLocaleTimeString('id-ID')}` : ''
+            ? `🟢 ${sync.statusText || 'Up to date'}\n• Sumber: ${sync.file || (isLocalDev ? 'Local Disk' : 'Vercel API')}${
+                sync.lastSync ? `\n• Terakhir dicek: ${sync.lastSync.toLocaleTimeString('id-ID')}` : ''
+              }${
+                sync.lastAiUpdate
+                  ? `\n• Terakhir dikerjakan AI: Task ${sync.lastAiUpdate.task} (${sync.lastAiUpdate.text || 'status changed'})`
+                  : ''
               }`
-            : 'Belum tersinkron ke server/disk'
+            : 'Belum terhubung ke server/disk'
         }
       >
         <span className="prd-status-dot" />
-        <span>{label}</span>
+        <span style={{ fontWeight: 600 }}>{label}</span>
         {isOnline && sync.lastSync && (
           <span className="prd-status-time">
-            {sync.lastSync.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+            ({sync.lastSync.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })})
           </span>
         )}
       </span>
@@ -134,12 +149,12 @@ function SyncStatusBadge({ sync, syncing, onSync, isLocalDev }) {
         <button
           type="button"
           className="prd-btn"
-          style={{ padding: '2px 8px', fontSize: '0.72rem', height: '24px' }}
-          onClick={onSync}
+          style={{ padding: '2px 9px', fontSize: '0.72rem', height: '24px' }}
+          onClick={() => onSync(true)}
           disabled={syncing}
-          title="Klik untuk sinkronkan data PRD & Kanban dengan server/disk"
+          title="Klik untuk memeriksa apakah AI agent sudah mengupdate task di MCP"
         >
-          {syncing ? '⏳ Syncing…' : '🔄 Sync'}
+          {syncing ? '⏳ Cek…' : '🔄 Cek Update'}
         </button>
       )}
     </div>
@@ -202,12 +217,61 @@ export default function PrdStudioTool({ apiKey, model, renderMarkdown }) {
     }
   }, [])
 
-  const pullFromServer = useCallback(async () => {
+  const pullFromServer = useCallback(async (isManualClick = false) => {
     setSyncing(true)
     try {
       const res = await fetch('/api/prd')
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
+      const remote = data.project ? normalizeProject(data.project) : null
+      const local = projectRef.current
+
+      let statusText = 'Up to date'
+      let updateDetail = ''
+      let hasUpdate = false
+
+      if (!remote) {
+        statusText = 'Belum ada file di MCP'
+      } else if (!local) {
+        statusText = 'Project dimuat dari MCP'
+        setProject(remote)
+      } else {
+        const isNewer = (remote.updatedAt || '') > (local.updatedAt || '')
+        if (isNewer) {
+          // Compare task changes
+          const diffs = []
+          remote.tasks.forEach((rt) => {
+            const lt = local.tasks.find((x) => x.id === rt.id)
+            if (!lt) diffs.push(`+ ${rt.id}`)
+            else if (lt.status !== rt.status) diffs.push(`${rt.id} → ${STATUS_LABELS[rt.status] || rt.status}`)
+          })
+          if (diffs.length) {
+            statusText = `Update AI: ${diffs.slice(0, 2).join(', ')}`
+            updateDetail = diffs.join(', ')
+            hasUpdate = true
+          } else {
+            statusText = 'Data diperbarui dari MCP'
+          }
+          setProject(remote)
+        } else {
+          statusText = isManualClick ? 'Up to date (Belum ada update baru)' : 'Up to date'
+        }
+      }
+
+      // Check if any task was updated by AI recently
+      let latestAiNote = null
+      if (remote) {
+        for (const t of remote.tasks) {
+          const aiNotes = (t.notes || []).filter((n) => n.by === 'ai')
+          if (aiNotes.length) {
+            const lastNote = aiNotes[aiNotes.length - 1]
+            if (!latestAiNote || lastNote.at > latestAiNote.at) {
+              latestAiNote = { task: t.id, ...lastNote }
+            }
+          }
+        }
+      }
+
       setSync((s) => ({
         ...s,
         available: true,
@@ -216,20 +280,18 @@ export default function PrdStudioTool({ apiKey, model, renderMarkdown }) {
         file: data.file || (isLocalDev ? 'Local Disk' : 'Cloud Session (Vercel)'),
         mcpServer: data.mcpServer || s.mcpServer,
         lastSync: new Date(),
+        lastAiUpdate: latestAiNote,
+        lastUpdateDetail: updateDetail,
+        statusText,
+        hasNewUpdate: hasUpdate,
         error: null,
       }))
-      if (data.project) {
-        const remote = normalizeProject(data.project)
-        const local = projectRef.current
-        if (!local || remote.id !== local.id || (remote.updatedAt || '') >= (local?.updatedAt || '')) {
-          setProject(remote)
-        }
-      }
       return true
     } catch (err) {
       setSync((s) => ({
         ...s,
         connected: false,
+        statusText: 'Gagal cek MCP',
         error: err.message,
       }))
       return false
@@ -1078,13 +1140,23 @@ function McpTab({ sync, syncing, onSync, project, onSyncNow }) {
       <div className={`prd-alert ${sync.connected ? 'ok' : 'warn'}`}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
           <div>
-            <strong>{sync.connected ? '● Server Terhubung' : '☁️ Mode Cloud (Vercel)'}:</strong>{' '}
-            {sync.connected
-              ? `${isLocalDev ? `Terhubung ke disk ${prdFile}` : 'Terhubung ke Cloud API (Vercel)'}. Klik tombol Sync kapan saja untuk melihat update terbaru dari AI agent.`
-              : 'PRD tersimpan aman di browser Anda. Hubungkan MCP server Anda menggunakan konfigurasi di bawah.'}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px' }}>
+              <span className={`prd-status-badge ${sync.connected ? 'connected' : 'disconnected'}`}>
+                <span className="prd-status-dot" />
+                {sync.statusText || (sync.connected ? 'Up to date' : 'Belum sync')}
+              </span>
+              <strong style={{ fontSize: '0.85rem' }}>
+                {sync.connected ? (isLocalDev ? `Disk: ${prdFile}` : 'Vercel Cloud API') : 'Belum Terhubung'}
+              </strong>
+            </div>
+            {sync.lastAiUpdate && (
+              <div style={{ fontSize: '0.76rem', color: 'var(--accent-green)', marginTop: '3px' }}>
+                ⚡ Terakhir dikerjakan AI: <strong>{sync.lastAiUpdate.task}</strong> {sync.lastAiUpdate.text ? `— "${sync.lastAiUpdate.text}"` : ''}
+              </div>
+            )}
             {sync.lastSync && (
-              <div style={{ fontSize: '0.74rem', opacity: 0.8, marginTop: '2px' }}>
-                Terakhir sync: {sync.lastSync.toLocaleTimeString('id-ID')}
+              <div style={{ fontSize: '0.72rem', opacity: 0.75, marginTop: '2px' }}>
+                Terakhir dicek: {sync.lastSync.toLocaleTimeString('id-ID')}
               </div>
             )}
           </div>
@@ -1092,11 +1164,11 @@ function McpTab({ sync, syncing, onSync, project, onSyncNow }) {
             <button
               type="button"
               className="prd-btn primary"
-              onClick={onSync}
+              onClick={() => onSync(true)}
               disabled={syncing}
-              style={{ fontSize: '0.8rem', padding: '6px 14px' }}
+              style={{ fontSize: '0.82rem', padding: '6px 16px' }}
             >
-              {syncing ? '⏳ Syncing…' : '🔄 Sync Sekarang'}
+              {syncing ? '⏳ Memeriksa…' : '🔄 Cek Update MCP'}
             </button>
           )}
         </div>
