@@ -3,6 +3,9 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "bin": {
+    "prd-studio": "./mcp/server.js"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",

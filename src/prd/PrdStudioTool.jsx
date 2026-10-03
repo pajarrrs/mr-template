@@ -968,23 +968,33 @@ const MCP_TOOLS = [
 ]
 
 function McpTab({ sync, onSyncNow }) {
-  const serverPath = isLocalDev && sync.mcpServer
-    ? sync.mcpServer.replace(/\\/g, '/')
-    : './mcp/server.js'
-  const prdFile = isLocalDev && sync.file ? sync.file.replace(/\\/g, '/') : ''
-  const config = JSON.stringify(
-    {
-      mcpServers: {
-        'prd-studio': {
-          command: 'node',
-          args: [serverPath],
-          ...(prdFile ? { env: { PRD_FILE: prdFile } } : {})
-        }
-      }
-    },
-    null,
-    2
-  )
+  const config = isLocalDev
+    ? JSON.stringify(
+        {
+          mcpServers: {
+            'prd-studio': {
+              command: 'node',
+              args: [(sync.mcpServer || './mcp/server.js').replace(/\\/g, '/')],
+              ...(sync.file ? { env: { PRD_FILE: sync.file.replace(/\\/g, '/') } } : {})
+            }
+          }
+        },
+        null,
+        2
+      )
+    : JSON.stringify(
+        {
+          mcpServers: {
+            'prd-studio': {
+              command: 'npx',
+              args: ['-y', 'github:pajarrrs/mr-template']
+            }
+          }
+        },
+        null,
+        2
+      )
+
   const agentPrompt =
     'Gunakan MCP prd-studio. Panggil get_next_task, set statusnya ke in_progress, implementasikan sesuai PRD (patuhi Out of Scope & Database Design), lalu set ke done dengan catatan file yang diubah. Ulangi sampai semua task selesai.'
 
