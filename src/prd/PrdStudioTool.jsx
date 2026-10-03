@@ -967,85 +967,232 @@ const MCP_TOOLS = [
   ['add_task_note', 'Tambah catatan implementasi'],
 ]
 
-function McpTab({ sync, onSyncNow }) {
-  const config = isLocalDev
-    ? JSON.stringify(
-        {
-          mcpServers: {
-            'prd-studio': {
-              command: 'node',
-              args: [(sync.mcpServer || './mcp/server.js').replace(/\\/g, '/')],
-              ...(sync.file ? { env: { PRD_FILE: sync.file.replace(/\\/g, '/') } } : {})
-            }
-          }
-        },
-        null,
-        2
-      )
-    : JSON.stringify(
-        {
-          mcpServers: {
-            'prd-studio': {
-              command: 'npx',
-              args: ['-y', 'github:pajarrrs/mr-template']
-            }
-          }
-        },
-        null,
-        2
-      )
+function McpTab({ sync, project, onSyncNow }) {
+  const [activeClient, setActiveClient] = useState('cursor')
+
+  const localPath = (sync.mcpServer || './mcp/server.js').replace(/\\/g, '/')
+  const prdFile = sync.file ? sync.file.replace(/\\/g, '/') : ''
+
+  // Konfigurasi dinamis
+  const npxConfig = {
+    mcpServers: {
+      'prd-studio': {
+        command: 'npx',
+        args: ['-y', 'github:pajarrrs/mr-template']
+      }
+    }
+  }
+
+  const localConfig = {
+    mcpServers: {
+      'prd-studio': {
+        command: 'node',
+        args: [localPath],
+        ...(prdFile ? { env: { PRD_FILE: prdFile } } : {})
+      }
+    }
+  }
+
+  const currentConfigObj = isLocalDev ? localConfig : npxConfig
+  const configJson = JSON.stringify(currentConfigObj, null, 2)
 
   const agentPrompt =
-    'Gunakan MCP prd-studio. Panggil get_next_task, set statusnya ke in_progress, implementasikan sesuai PRD (patuhi Out of Scope & Database Design), lalu set ke done dengan catatan file yang diubah. Ulangi sampai semua task selesai.'
+    'Gunakan MCP server "prd-studio". Pertama panggil get_next_task untuk melihat tugas yang harus dikerjakan. Ubah statusnya ke in_progress menggunakan update_task_status. Kemudian buat atau ubah kode sesuai acceptance criteria dan desain database yang ada di PRD. Setelah selesai dan teruji, ubah statusnya ke done dengan catatan file yang Anda ubah. Ulangi untuk tugas berikutnya.'
 
   return (
     <div className="prd-mcp">
-      <div className={`prd-alert ${sync.available && isLocalDev ? 'ok' : 'warn'}`}>
+      {/* Status banner */}
+      <div className={`prd-alert ${isLocalDev && sync.available ? 'ok' : 'warn'}`}>
         {isLocalDev && sync.available ? (
           <>
-            <strong>Sync lokal aktif.</strong> PRD tersimpan di <code>{prdFile}</code> (+ <code>PRD.md</code> di folder yang sama). Kanban otomatis refresh tiap 3 detik saat AI agent mengupdate task.
-            {sync.lastSync && <> Terakhir sync: {sync.lastSync.toLocaleTimeString('id-ID')}.</>}
+            <strong>● Mode Lokal Aktif:</strong> MCP terhubung langsung ke file disk <code>{prdFile}</code>. Setiap perubahan status task oleh AI agent akan otomatis menggeser kartu di Kanban board web ini.
+            {sync.lastSync && <> (Terakhir sync: {sync.lastSync.toLocaleTimeString('id-ID')})</>}
           </>
         ) : (
           <>
-            <strong>Mode Cloud / Multi-User:</strong> PRD tersimpan aman di browser Anda. Agar AI agent (Cursor / Claude Desktop) di laptop Anda bisa membaca PRD ini:
-            <ol style={{ marginTop: '6px', marginLeft: '18px' }}>
-              <li>Klik tab <b>PRD</b> → <b>Download JSON</b> (simpan sebagai <code>project.json</code> di root proyek coding Anda).</li>
-              <li>Jalankan MCP server di bawah ini. MCP akan otomatis mendeteksi <code>project.json</code> di folder proyek Anda.</li>
-            </ol>
+            <strong>☁️ Mode Cloud (Vercel) / Multi-User:</strong> PRD tersimpan aman di browser Anda. Siapa pun (termasuk tim Anda di komputer lain) dapat menggunakan MCP ini tanpa perlu meng-clone repository! Ikuti panduan 4 langkah mudah di bawah.
           </>
         )}
       </div>
-      {sync.available && (
-        <button type="button" className="prd-btn primary" onClick={onSyncNow}>Sync ke MCP sekarang</button>
-      )}
 
-      <h4>1. Tambahkan MCP server ke AI agent</h4>
-      <p className="field-hint">
-        <b>Cursor:</b> <code>.cursor/mcp.json</code> · <b>Claude Desktop:</b> <code>claude_desktop_config.json</code> · <b>Antigravity / lainnya:</b> menu MCP servers → edit config.
-      </p>
-      <div className="prd-code-wrap">
-        <CopyButton text={config} label="Copy config" className="float" />
-        <pre className="prd-code">{config}</pre>
+      <div className="prd-mcp-steps">
+        {/* LANGKAH 1 */}
+        <div className="prd-mcp-step-card">
+          <div className="prd-mcp-step-header">
+            <div className="prd-mcp-step-badge">1</div>
+            <div>
+              <h4 className="prd-mcp-step-title">Simpan File PRD ke Folder Proyek Coding Anda</h4>
+              <p className="prd-mcp-step-sub">MCP server membaca requirement & task dari file ini.</p>
+            </div>
+          </div>
+
+          <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+            Download file <code>project.json</code> di bawah ini, lalu letakkan di root folder tempat Anda menulis kode (misalnya di <code>my-chat-app/project.json</code>).
+          </p>
+
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className="prd-btn primary"
+              disabled={!project}
+              onClick={() => project && downloadFile('project.json', JSON.stringify(project, null, 2), 'application/json')}
+            >
+              ⬇️ Download project.json
+            </button>
+            <button
+              type="button"
+              className="prd-btn"
+              disabled={!project}
+              onClick={() => project && downloadFile('PRD.md', buildPrdMarkdown(project), 'text/markdown')}
+            >
+              📄 Download PRD.md (Dokumentasi)
+            </button>
+            {isLocalDev && sync.available && (
+              <button type="button" className="prd-btn" onClick={onSyncNow}>
+                🔄 Sync ke File Disk Sekarang
+              </button>
+            )}
+          </div>
+
+          <div className="prd-mcp-tip">
+            <span>💡</span>
+            <div>
+              <strong>Otomatis Terdeteksi:</strong> MCP Server secara cerdas akan langsung mencari file <code>project.json</code> atau <code>.prd/project.json</code> di folder tempat editor coding Anda dibuka.
+            </div>
+          </div>
+        </div>
+
+        {/* LANGKAH 2 */}
+        <div className="prd-mcp-step-card">
+          <div className="prd-mcp-step-header">
+            <div className="prd-mcp-step-badge">2</div>
+            <div>
+              <h4 className="prd-mcp-step-title">Daftarkan MCP Server ke Editor AI Anda</h4>
+              <p className="prd-mcp-step-sub">Pilih editor yang Anda gunakan untuk melihat petunjuk dan file konfigurasinya.</p>
+            </div>
+          </div>
+
+          {/* Client switcher buttons */}
+          <div className="prd-mcp-client-tabs">
+            <button
+              type="button"
+              className={`prd-mcp-client-btn ${activeClient === 'cursor' ? 'active' : ''}`}
+              onClick={() => setActiveClient('cursor')}
+            >
+              Cursor Editor
+            </button>
+            <button
+              type="button"
+              className={`prd-mcp-client-btn ${activeClient === 'claude' ? 'active' : ''}`}
+              onClick={() => setActiveClient('claude')}
+            >
+              Claude Desktop
+            </button>
+            <button
+              type="button"
+              className={`prd-mcp-client-btn ${activeClient === 'cline' ? 'active' : ''}`}
+              onClick={() => setActiveClient('cline')}
+            >
+              VS Code (Cline / Roo Code)
+            </button>
+          </div>
+
+          {/* Specific instructions per client */}
+          {activeClient === 'cursor' && (
+            <div style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+              <p><b>Cara pasang di Cursor:</b></p>
+              <ol style={{ margin: '6px 0 10px 20px' }}>
+                <li>Di folder proyek Anda, buat file baru: <code>.cursor/mcp.json</code> (atau buka <b>Cursor Settings → Features → MCP</b>).</li>
+                <li>Salin konfigurasi JSON di bawah ini dan tempelkan ke file tersebut.</li>
+                <li>Simpan file. Cursor akan otomatis menghubungkan MCP Server (indikator hijau).</li>
+              </ol>
+            </div>
+          )}
+
+          {activeClient === 'claude' && (
+            <div style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+              <p><b>Cara pasang di Claude Desktop:</b></p>
+              <ol style={{ margin: '6px 0 10px 20px' }}>
+                <li>Buka aplikasi Claude Desktop → klik menu <b>Settings → Developer → Edit Config</b>.</li>
+                <li>File <code>claude_desktop_config.json</code> akan terbuka di text editor.</li>
+                <li>Tempelkan konfigurasi JSON di bawah ini di dalam objek <code>mcpServers</code>.</li>
+                <li>Restart aplikasi Claude Desktop. Ikon palu (🔨) akan muncul di chat Claude menandakan tool aktif.</li>
+              </ol>
+            </div>
+          )}
+
+          {activeClient === 'cline' && (
+            <div style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+              <p><b>Cara pasang di VS Code (Cline / Roo Code Extension):</b></p>
+              <ol style={{ margin: '6px 0 10px 20px' }}>
+                <li>Buka sidebar extension <b>Cline</b> atau <b>Roo Code</b>.</li>
+                <li>Klik ikon <b>MCP Servers</b> (ikon kabel/server) → pilih <b>Edit MCP Settings</b>.</li>
+                <li>Tempelkan konfigurasi JSON di bawah ini lalu simpan.</li>
+              </ol>
+            </div>
+          )}
+
+          <div className="prd-code-wrap">
+            <CopyButton text={configJson} label="Salin Konfigurasi JSON" className="float" />
+            <pre className="prd-code">{configJson}</pre>
+          </div>
+
+          <div className="prd-mcp-tip">
+            <span>✨</span>
+            <div>
+              <strong>Bebas Instalasi (Zero Clone):</strong> Perintah <code>npx -y github:pajarrrs/mr-template</code> memungkinkan Anda dan orang lain menjalankan MCP server langsung dari cloud tanpa perlu git-clone atau instalasi manual apapun!
+            </div>
+          </div>
+        </div>
+
+        {/* LANGKAH 3 */}
+        <div className="prd-mcp-step-card">
+          <div className="prd-mcp-step-header">
+            <div className="prd-mcp-step-badge">3</div>
+            <div>
+              <h4 className="prd-mcp-step-title">Perintahkan AI untuk Mulai Coding</h4>
+              <p className="prd-mcp-step-sub">Buka AI Chat di editor Anda dan berikan instruksi eksekusi ini.</p>
+            </div>
+          </div>
+
+          <p style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+            Buka panel AI (Cursor Composer / Claude / Cline), pastikan mode <b>Agent</b> aktif, lalu salin dan kirimkan prompt ini:
+          </p>
+
+          <div className="prd-code-wrap">
+            <CopyButton text={agentPrompt} label="Salin Prompt Instruksi" className="float" />
+            <pre className="prd-code wrap">{agentPrompt}</pre>
+          </div>
+        </div>
+
+        {/* LANGKAH 4 */}
+        <div className="prd-mcp-step-card">
+          <div className="prd-mcp-step-header">
+            <div className="prd-mcp-step-badge">4</div>
+            <div>
+              <h4 className="prd-mcp-step-title">Alur Eksekusi & Daftar Tool MCP</h4>
+              <p className="prd-mcp-step-sub">Berikut daftar tool yang akan dipanggil secara otomatis oleh AI agent.</p>
+            </div>
+          </div>
+
+          <table className="markdown-table prd-tools-table">
+            <thead>
+              <tr>
+                <th style={{ textAlign: 'left' }}>Nama MCP Tool</th>
+                <th style={{ textAlign: 'left' }}>Apa yang Dilakukan AI?</th>
+              </tr>
+            </thead>
+            <tbody>
+              {MCP_TOOLS.map(([name, desc]) => (
+                <tr key={name}>
+                  <td><code>{name}</code></td>
+                  <td>{desc}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
-
-      <h4>2. Perintahkan AI agent</h4>
-      <div className="prd-code-wrap">
-        <CopyButton text={agentPrompt} label="Copy prompt" className="float" />
-        <pre className="prd-code wrap">{agentPrompt}</pre>
-      </div>
-
-      <h4>3. Tools yang tersedia</h4>
-      <table className="markdown-table prd-tools-table">
-        <tbody>
-          {MCP_TOOLS.map(([name, desc]) => (
-            <tr key={name}>
-              <td><code>{name}</code></td>
-              <td>{desc}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
     </div>
   )
 }
