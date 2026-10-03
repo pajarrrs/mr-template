@@ -107,28 +107,42 @@ function CopyButton({ text, label = 'Copy', className = '' }) {
   )
 }
 
-function SyncStatusBadge({ sync, isLocalDev }) {
+function SyncStatusBadge({ sync, syncing, onSync, isLocalDev }) {
   const isOnline = sync.connected
-  const label = isOnline ? 'Connected' : sync.error ? 'Disconnected' : 'Connecting...'
+  const label = syncing ? 'Syncing...' : isOnline ? 'Synced' : sync.error ? 'Offline' : 'Ready'
   return (
-    <span
-      className={`prd-status-badge ${isOnline ? 'connected' : sync.error ? 'disconnected' : 'connecting'}`}
-      title={
-        isOnline
-          ? `🟢 Connected (Live Sync 15s) ke ${sync.file || (isLocalDev ? 'Local Disk' : 'Vercel Cloud API')}${
-              sync.lastSync ? ` • Sync terakhir: ${sync.lastSync.toLocaleTimeString('id-ID')}` : ''
-            }`
-          : 'Sedang menghubungkan ke server...'
-      }
-    >
-      <span className="prd-status-dot" />
-      <span>{label}</span>
-      {isOnline && sync.lastSync && (
-        <span className="prd-status-time">
-          {sync.lastSync.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
-        </span>
+    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+      <span
+        className={`prd-status-badge ${syncing ? 'connecting' : isOnline ? 'connected' : 'disconnected'}`}
+        title={
+          isOnline
+            ? `🟢 Terhubung ke ${sync.file || (isLocalDev ? 'Local Disk' : 'Vercel API')}${
+                sync.lastSync ? ` • Terakhir sync: ${sync.lastSync.toLocaleTimeString('id-ID')}` : ''
+              }`
+            : 'Belum tersinkron ke server/disk'
+        }
+      >
+        <span className="prd-status-dot" />
+        <span>{label}</span>
+        {isOnline && sync.lastSync && (
+          <span className="prd-status-time">
+            {sync.lastSync.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+          </span>
+        )}
+      </span>
+      {onSync && (
+        <button
+          type="button"
+          className="prd-btn"
+          style={{ padding: '2px 8px', fontSize: '0.72rem', height: '24px' }}
+          onClick={onSync}
+          disabled={syncing}
+          title="Klik untuk sinkronkan data PRD & Kanban dengan server/disk"
+        >
+          {syncing ? '⏳ Syncing…' : '🔄 Sync'}
+        </button>
       )}
-    </span>
+    </div>
   )
 }
 
@@ -163,7 +177,9 @@ export default function PrdStudioTool({ apiKey, model, renderMarkdown }) {
     if (project) localStorage.setItem(LS_KEY, JSON.stringify(project))
   }, [project])
 
-  // ── File sync with Long-Polling (Vite dev middleware OR Vercel API ↔ MCP server) ──
+  const [syncing, setSyncing] = useState(false)
+
+  // ── On-demand file sync (Vite dev middleware OR Vercel API ↔ MCP server) ──
 
   const pushToServer = useCallback(async (p) => {
     try {
@@ -178,7 +194,7 @@ export default function PrdStudioTool({ apiKey, model, renderMarkdown }) {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`)
-      setSync((s) => ({ ...s, available: true, connected: true, liveLongPoll: true, file: data.file, lastSync: new Date(), error: null }))
+      setSync((s) => ({ ...s, available: true, connected: true, file: data.file, lastSync: new Date(), error: null }))
       return normalizeProject(data.project)
     } catch (err) {
       setSync((s) => ({ ...s, error: err.message }))
@@ -186,75 +202,46 @@ export default function PrdStudioTool({ apiKey, model, renderMarkdown }) {
     }
   }, [])
 
-  useEffect(() => {
-    let active = true
-    const controller = new AbortController()
-
-    const longPollLoop = async () => {
-      while (active) {
-        try {
-          const currentProj = projectRef.current
-          const since = currentProj?.updatedAt
-          const query = since ? `?since=${encodeURIComponent(since)}&longpoll=1` : '?longpoll=1'
-
-          const res = await fetch(`/api/prd${query}`, {
-            signal: controller.signal,
-          })
-          if (!res.ok) throw new Error(`HTTP ${res.status}`)
-          const data = await res.json()
-          if (!active) break
-
-          setSync((s) => ({
-            ...s,
-            available: true,
-            connected: true,
-            liveLongPoll: true,
-            isCloud: data.isCloud || !isLocalDev,
-            file: data.file || (isLocalDev ? 'Local Disk' : 'Cloud Session (Vercel)'),
-            mcpServer: data.mcpServer || s.mcpServer,
-            error: null,
-          }))
-
-          let didUpdate = false
-          if (data.project) {
-            const remote = normalizeProject(data.project)
-            const local = projectRef.current
-            // Remote wins if it is a different project or has newer edits (e.g. AI agent moved a card).
-            if (!local || remote.id !== local.id || (remote.updatedAt || '') > (local?.updatedAt || '')) {
-              setProject(remote)
-              setSync((s) => ({ ...s, lastSync: new Date() }))
-              didUpdate = true
-            }
-          }
-
-          // If the server returned an immediate response without new data and without timeout flag,
-          // wait 15 seconds so it never hammers the server in a tight loop!
-          if (!didUpdate && !data.timeout) {
-            await new Promise((r) => setTimeout(r, 15000))
-          } else if (didUpdate) {
-            await new Promise((r) => setTimeout(r, 200))
-          }
-        } catch (err) {
-          if (!active || err.name === 'AbortError') break
-          setSync((s) => ({
-            ...s,
-            connected: false,
-            liveLongPoll: false,
-            error: err.message,
-          }))
-          // Wait 3s before retrying upon network/server interruption
-          await new Promise((r) => setTimeout(r, 3000))
+  const pullFromServer = useCallback(async () => {
+    setSyncing(true)
+    try {
+      const res = await fetch('/api/prd')
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const data = await res.json()
+      setSync((s) => ({
+        ...s,
+        available: true,
+        connected: true,
+        isCloud: data.isCloud || !isLocalDev,
+        file: data.file || (isLocalDev ? 'Local Disk' : 'Cloud Session (Vercel)'),
+        mcpServer: data.mcpServer || s.mcpServer,
+        lastSync: new Date(),
+        error: null,
+      }))
+      if (data.project) {
+        const remote = normalizeProject(data.project)
+        const local = projectRef.current
+        if (!local || remote.id !== local.id || (remote.updatedAt || '') >= (local?.updatedAt || '')) {
+          setProject(remote)
         }
       }
-    }
-
-    longPollLoop()
-
-    return () => {
-      active = false
-      controller.abort()
+      return true
+    } catch (err) {
+      setSync((s) => ({
+        ...s,
+        connected: false,
+        error: err.message,
+      }))
+      return false
+    } finally {
+      setSyncing(false)
     }
   }, [])
+
+  // Initial load only - no continuous background polling loop!
+  useEffect(() => {
+    pullFromServer()
+  }, [pullFromServer])
 
   // Every local edit goes through commit() so updatedAt + sync stay consistent.
   const commit = useCallback(
@@ -462,7 +449,7 @@ export default function PrdStudioTool({ apiKey, model, renderMarkdown }) {
         <div className="panel-header">
           <span className="panel-title">✦ Apa yang ingin kamu bangun?</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <SyncStatusBadge sync={sync} isLocalDev={isLocalDev} />
+            <SyncStatusBadge sync={sync} syncing={syncing} onSync={pullFromServer} isLocalDev={isLocalDev} />
             <span
               className={`prd-sync-pill ${sync.connected ? 'on' : isLocalDev ? 'off' : 'cloud'}`}
               title={
@@ -572,7 +559,7 @@ export default function PrdStudioTool({ apiKey, model, renderMarkdown }) {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '4px' }}>
                 <h2>{project.meta.name}</h2>
-                <SyncStatusBadge sync={sync} isLocalDev={isLocalDev} />
+                <SyncStatusBadge sync={sync} syncing={syncing} onSync={pullFromServer} isLocalDev={isLocalDev} />
               </div>
               <p>{project.meta.summary}</p>
             </div>
@@ -593,7 +580,7 @@ export default function PrdStudioTool({ apiKey, model, renderMarkdown }) {
             ))}
             <div className="prd-tabs-spacer" />
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <SyncStatusBadge sync={sync} isLocalDev={isLocalDev} />
+              <SyncStatusBadge sync={sync} syncing={syncing} onSync={pullFromServer} isLocalDev={isLocalDev} />
               <button type="button" className="prd-btn ghost" onClick={handleClear}>Reset</button>
             </div>
           </div>
@@ -614,7 +601,15 @@ export default function PrdStudioTool({ apiKey, model, renderMarkdown }) {
             {tab === 'kanban' && (
               <KanbanTab project={project} onMove={moveTask} onUpdate={updateTask} onAdd={addTask} onDelete={deleteTask} />
             )}
-            {tab === 'mcp' && <McpTab sync={sync} project={project} onSyncNow={() => pushToServer(project).then((s) => s && setProject(s))} />}
+            {tab === 'mcp' && (
+              <McpTab
+                sync={sync}
+                syncing={syncing}
+                onSync={pullFromServer}
+                project={project}
+                onSyncNow={() => pushToServer(project).then((s) => s && setProject(s))}
+              />
+            )}
           </div>
         </section>
       )}
@@ -1045,7 +1040,7 @@ const MCP_TOOLS = [
   ['add_task_note', 'Tambah catatan implementasi'],
 ]
 
-function McpTab({ sync, project, onSyncNow }) {
+function McpTab({ sync, syncing, onSync, project, onSyncNow }) {
   const [activeClient, setActiveClient] = useState('cursor')
 
   const localPath = (sync.mcpServer || './mcp/server.js').replace(/\\/g, '/')
@@ -1080,17 +1075,31 @@ function McpTab({ sync, project, onSyncNow }) {
   return (
     <div className="prd-mcp">
       {/* Status banner */}
-      <div className={`prd-alert ${sync.available ? 'ok' : 'warn'}`}>
-        {sync.available ? (
-          <>
-            <strong>🟢 Live Sync (Long-Polling 15s) Aktif:</strong> {isLocalDev ? `Terhubung ke disk ${prdFile}` : 'Terhubung ke Cloud API (Vercel)'}. Setiap AI agent mengupdate task via MCP, perubahan status kartu dan persentase progress akan langsung tersinkronisasi secara real-time!
-            {sync.lastSync && <> (Sync terakhir: {sync.lastSync.toLocaleTimeString('id-ID')})</>}
-          </>
-        ) : (
-          <>
-            <strong>☁️ Mode Cloud (Vercel) / Multi-User:</strong> PRD tersimpan aman di browser Anda. Siapa pun (termasuk tim Anda di komputer lain) dapat menggunakan MCP ini tanpa perlu meng-clone repository!
-          </>
-        )}
+      <div className={`prd-alert ${sync.connected ? 'ok' : 'warn'}`}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+          <div>
+            <strong>{sync.connected ? '● Server Terhubung' : '☁️ Mode Cloud (Vercel)'}:</strong>{' '}
+            {sync.connected
+              ? `${isLocalDev ? `Terhubung ke disk ${prdFile}` : 'Terhubung ke Cloud API (Vercel)'}. Klik tombol Sync kapan saja untuk melihat update terbaru dari AI agent.`
+              : 'PRD tersimpan aman di browser Anda. Hubungkan MCP server Anda menggunakan konfigurasi di bawah.'}
+            {sync.lastSync && (
+              <div style={{ fontSize: '0.74rem', opacity: 0.8, marginTop: '2px' }}>
+                Terakhir sync: {sync.lastSync.toLocaleTimeString('id-ID')}
+              </div>
+            )}
+          </div>
+          {onSync && (
+            <button
+              type="button"
+              className="prd-btn primary"
+              onClick={onSync}
+              disabled={syncing}
+              style={{ fontSize: '0.8rem', padding: '6px 14px' }}
+            >
+              {syncing ? '⏳ Syncing…' : '🔄 Sync Sekarang'}
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="prd-mcp-steps">
