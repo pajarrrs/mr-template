@@ -65,11 +65,11 @@ function prdSyncPlugin() {
               }
               subscribers.add(onUpdate)
 
-              // 25s timeout
+              // 15s timeout
               timer = setTimeout(() => {
                 subscribers.delete(onUpdate)
                 send(200, { file: getPrdFile(), mcpServer: MCP_SERVER_PATH, project: current, timeout: true })
-              }, 25000)
+              }, 15000)
 
               req.on('close', () => {
                 if (timer) clearTimeout(timer)

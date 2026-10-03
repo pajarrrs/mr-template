@@ -1044,7 +1044,7 @@ function McpTab({ sync, project, onSyncNow }) {
       <div className={`prd-alert ${sync.available ? 'ok' : 'warn'}`}>
         {sync.available ? (
           <>
-            <strong>🟢 Live Sync (Long-Polling) Aktif:</strong> {isLocalDev ? `Terhubung ke disk ${prdFile}` : 'Terhubung ke Cloud API (Vercel)'}. Setiap AI agent mengupdate task via MCP, perubahan status kartu dan persentase progress akan langsung tersinkronisasi secara real-time!
+            <strong>🟢 Live Sync (Long-Polling 15s) Aktif:</strong> {isLocalDev ? `Terhubung ke disk ${prdFile}` : 'Terhubung ke Cloud API (Vercel)'}. Setiap AI agent mengupdate task via MCP, perubahan status kartu dan persentase progress akan langsung tersinkronisasi secara real-time!
             {sync.lastSync && <> (Sync terakhir: {sync.lastSync.toLocaleTimeString('id-ID')})</>}
           </>
         ) : (

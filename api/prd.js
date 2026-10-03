@@ -37,7 +37,7 @@ export default function handler(req, res) {
 
       subscribers.add(onUpdate)
 
-      // Vercel serverless functions have execution limits; 9s timeout keeps it responsive and within limits
+      // Long-polling timeout set to 15 seconds
       timer = setTimeout(() => {
         subscribers.delete(onUpdate)
         res.status(200).json({
@@ -47,7 +47,7 @@ export default function handler(req, res) {
           project: memoryStore,
           timeout: true
         })
-      }, 9000)
+      }, 15000)
 
       req.on('close', () => {
         if (timer) clearTimeout(timer)
