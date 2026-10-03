@@ -1,0 +1,932 @@
+{
+  "version": 1,
+  "id": "prd_musllre9",
+  "request": "buatkan prd membuat aplikasi chat",
+  "createdAt": "2026-10-03T16:20:20.334Z",
+  "updatedAt": "2026-10-03T16:22:21.388Z",
+  "meta": {
+    "name": "ChatApp",
+    "summary": "A real‑time text chat application with user authentication, room management, and instant messaging.",
+    "problem": "Users need a simple, secure, and fast way to communicate in real time across multiple chat rooms without the complexity of existing solutions.",
+    "goals": [
+      "Enable secure user registration and authentication with JWT tokens.",
+      "Support creation, listing, and joining of chat rooms.",
+      "Provide instant message sending and real‑time delivery.",
+      "Store message history with pagination for rooms.",
+      "Display online presence of participants."
+    ],
+    "targetUsers": [
+      "General consumers",
+      "Teams needing quick internal chat",
+      "Developers looking for a lightweight chat service"
+    ],
+    "techStack": {
+      "frontend": "React + TypeScript",
+      "backend": "Node.js + Express + TypeScript",
+      "database": "PostgreSQL",
+      "other": [
+        "Socket.IO",
+        "Docker",
+        "CI/CD (GitHub Actions)",
+        "Jest / Supertest"
+      ]
+    }
+  },
+  "features": [
+    {
+      "id": "F1",
+      "name": "User Registration & Authentication",
+      "priority": "must",
+      "description": "Allows new users to sign up and existing users to log in, returning a JWT token for protected endpoints.",
+      "userStory": "As a new user, I want to register with a username and password so that I can access the chat service.",
+      "acceptanceCriteria": [
+        {
+          "given": "A user submits a valid username and password to /api/auth/register",
+          "when": "the request is processed",
+          "then": "a new user record is created and a success response with a JWT token is returned"
+        },
+        {
+          "given": "An existing user submits correct credentials to /api/auth/login",
+          "when": "the request is processed",
+          "then": "a JWT token is returned and the user is authenticated"
+        },
+        {
+          "given": "A protected endpoint is called with an invalid or expired token",
+          "when": "the request is made",
+          "then": "a 401 Unauthorized response is returned"
+        }
+      ]
+    },
+    {
+      "id": "F2",
+      "name": "Create & List Chat Rooms",
+      "priority": "must",
+      "description": "Users can create new chat rooms with a name and description, and view a list of all available rooms.",
+      "userStory": "As a user, I want to create a chat room with a name and description, and see all existing rooms.",
+      "acceptanceCriteria": [
+        {
+          "given": "A logged‑in user sends a POST to /api/rooms with name and description",
+          "when": "the room is created",
+          "then": "the room is persisted and returned with an ID"
+        },
+        {
+          "given": "A logged‑in user requests GET /api/rooms",
+          "when": "rooms exist",
+          "then": "a list of rooms (id, name, description, member count) is returned"
+        },
+        {
+          "given": "A user attempts to create a room without a name",
+          "when": "the request is processed",
+          "then": "a 400 Bad Request is returned"
+        }
+      ]
+    },
+    {
+      "id": "F3",
+      "name": "Send & Receive Messages",
+      "priority": "must",
+      "description": "Real‑time messaging within a room, persisting messages to the database and delivering them instantly to participants.",
+      "userStory": "As a user, I want to send a text message to a room and see it instantly.",
+      "acceptanceCriteria": [
+        {
+          "given": "A logged‑in user sends a POST to /api/messages with room_id and content",
+          "when": "the message is saved",
+          "then": "the message is returned with an ID and timestamp"
+        },
+        {
+          "given": "A user subscribes to a room's Socket.IO channel",
+          "when": "another user sends a message to that room",
+          "then": "the message is broadcast to all subscribers in real time"
+        },
+        {
+          "given": "A message is sent to a non‑existent room",
+          "when": "the request is processed",
+          "then": "a 404 Not Found response is returned"
+        }
+      ]
+    },
+    {
+      "id": "F4",
+      "name": "Message History & Pagination",
+      "priority": "should",
+      "description": "Retrieve message history for a room with pagination to support scrolling through past messages.",
+      "userStory": "As a user, I want to scroll through past messages in a room.",
+      "acceptanceCriteria": [
+        {
+          "given": "A logged‑in user requests GET /api/rooms/:id/messages?page=1&limit=20",
+          "when": "messages exist",
+          "then": "up to 20 messages are returned with pagination metadata"
+        },
+        {
+          "given": "A user requests messages for a room they are not a member of",
+          "when": "the request is processed",
+          "then": "a 403 Forbidden response is returned"
+        },
+        {
+          "given": "A user requests a page beyond the total pages",
+          "when": "the request is processed",
+          "then": "an empty array is returned with correct pagination metadata"
+        }
+      ]
+    },
+    {
+      "id": "F5",
+      "name": "Presence & Online Status",
+      "priority": "should",
+      "description": "Show which users are online in a room, updating in real time as users join/leave.",
+      "userStory": "As a user, I want to see the online status of other participants.",
+      "acceptanceCriteria": [
+        {
+          "given": "A user connects to Socket.IO and joins a room",
+          "when": "the connection is established",
+          "then": "a presence event is emitted to all room subscribers indicating the user is online"
+        },
+        {
+          "given": "A user disconnects from Socket.IO",
+          "when": "the connection closes",
+          "then": "a presence event is emitted indicating the user is offline"
+        },
+        {
+          "given": "A client subscribes to presence updates for a room",
+          "when": "a user comes online",
+          "then": "the client receives a presence update with the user's ID and timestamp"
+        }
+      ]
+    },
+    {
+      "id": "F6",
+      "name": "WebSocket Real‑Time Communication",
+      "priority": "could",
+      "description": "Use Socket.IO for bi‑directional real‑time messaging, reducing latency compared to HTTP polling.",
+      "userStory": "As a user, I want messages to appear instantly without page refresh.",
+      "acceptanceCriteria": [
+        {
+          "given": "A client establishes a WebSocket connection to /socket.io",
+          "when": "a message is sent via Socket.IO",
+          "then": "the message is broadcast to all room subscribers within 100ms"
+        },
+        {
+          "given": "A client sends a typing indicator event",
+          "when": "another user is in the same room",
+          "then": "the recipient receives a typing event"
+        },
+        {
+          "given": "The server restarts while clients are connected",
+          "when": "clients attempt to reconnect",
+          "then": "clients automatically re‑establish the connection and resume receiving events"
+        }
+      ]
+    }
+  ],
+  "nonFunctional": [
+    "Performance: messages should be delivered within 100ms under moderate load.",
+    "Security: JWT tokens must be HTTP‑Only, use HTTPS, and have a 24‑hour expiration.",
+    "Accessibility: UI components must meet WCAG 2.1 AA standards.",
+    "Scalability: Architecture should support horizontal scaling of message handling."
+  ],
+  "database": {
+    "tables": [
+      {
+        "name": "users",
+        "description": "Application users with authentication details.",
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "pk": true,
+            "nullable": false,
+            "unique": false,
+            "fk": null,
+            "note": ""
+          },
+          {
+            "name": "username",
+            "type": "varchar",
+            "pk": false,
+            "nullable": false,
+            "unique": true,
+            "fk": null,
+            "note": ""
+          },
+          {
+            "name": "email",
+            "type": "varchar",
+            "pk": false,
+            "nullable": false,
+            "unique": true,
+            "fk": null,
+            "note": ""
+          },
+          {
+            "name": "password_hash",
+            "type": "varchar",
+            "pk": false,
+            "nullable": false,
+            "unique": false,
+            "fk": null,
+            "note": ""
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz",
+            "pk": false,
+            "nullable": false,
+            "unique": false,
+            "fk": null,
+            "note": ""
+          }
+        ]
+      },
+      {
+        "name": "rooms",
+        "description": "Chat rooms created by users.",
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "pk": true,
+            "nullable": false,
+            "unique": false,
+            "fk": null,
+            "note": ""
+          },
+          {
+            "name": "name",
+            "type": "varchar",
+            "pk": false,
+            "nullable": false,
+            "unique": false,
+            "fk": null,
+            "note": ""
+          },
+          {
+            "name": "description",
+            "type": "text",
+            "pk": false,
+            "nullable": true,
+            "unique": false,
+            "fk": null,
+            "note": ""
+          },
+          {
+            "name": "created_by",
+            "type": "uuid",
+            "pk": false,
+            "nullable": false,
+            "unique": false,
+            "fk": "users.id",
+            "note": ""
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz",
+            "pk": false,
+            "nullable": false,
+            "unique": false,
+            "fk": null,
+            "note": ""
+          }
+        ]
+      },
+      {
+        "name": "messages",
+        "description": "Messages sent within rooms.",
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "pk": true,
+            "nullable": false,
+            "unique": false,
+            "fk": null,
+            "note": ""
+          },
+          {
+            "name": "room_id",
+            "type": "uuid",
+            "pk": false,
+            "nullable": false,
+            "unique": false,
+            "fk": "rooms.id",
+            "note": ""
+          },
+          {
+            "name": "user_id",
+            "type": "uuid",
+            "pk": false,
+            "nullable": false,
+            "unique": false,
+            "fk": "users.id",
+            "note": ""
+          },
+          {
+            "name": "content",
+            "type": "text",
+            "pk": false,
+            "nullable": false,
+            "unique": false,
+            "fk": null,
+            "note": ""
+          },
+          {
+            "name": "sent_at",
+            "type": "timestamptz",
+            "pk": false,
+            "nullable": false,
+            "unique": false,
+            "fk": null,
+            "note": ""
+          }
+        ]
+      },
+      {
+        "name": "room_members",
+        "description": "Many‑to‑many relationship between users and rooms.",
+        "columns": [
+          {
+            "name": "room_id",
+            "type": "uuid",
+            "pk": false,
+            "nullable": false,
+            "unique": false,
+            "fk": "rooms.id",
+            "note": ""
+          },
+          {
+            "name": "user_id",
+            "type": "uuid",
+            "pk": false,
+            "nullable": false,
+            "unique": false,
+            "fk": "users.id",
+            "note": ""
+          },
+          {
+            "name": "joined_at",
+            "type": "timestamptz",
+            "pk": false,
+            "nullable": false,
+            "unique": false,
+            "fk": null,
+            "note": ""
+          }
+        ]
+      }
+    ]
+  },
+  "api": [
+    {
+      "method": "POST",
+      "path": "/api/auth/register",
+      "description": "Register a new user and return a JWT token.",
+      "auth": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/login",
+      "description": "Authenticate user and return a JWT token.",
+      "auth": false
+    },
+    {
+      "method": "GET",
+      "path": "/api/rooms",
+      "description": "List all chat rooms for the authenticated user.",
+      "auth": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/rooms",
+      "description": "Create a new chat room.",
+      "auth": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/rooms/:id/messages",
+      "description": "Retrieve paginated message history for a room.",
+      "auth": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/messages",
+      "description": "Send a new message to a room.",
+      "auth": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/users/online",
+      "description": "Get list of currently online users (optional).",
+      "auth": true
+    },
+    {
+      "method": "WS",
+      "path": "/socket.io",
+      "description": "WebSocket endpoint for real‑time messaging and presence.",
+      "auth": true
+    }
+  ],
+  "steps": [
+    {
+      "phase": 1,
+      "title": "Architecture & Setup",
+      "description": "Define project structure, choose CI/CD, set up Docker, create shared libraries and linting rules."
+    },
+    {
+      "phase": 2,
+      "title": "Core Backend & DB",
+      "description": "Design and create PostgreSQL schema, implement basic CRUD repositories, and set up environment configuration."
+    },
+    {
+      "phase": 3,
+      "title": "Authentication & User Management",
+      "description": "Implement registration and login endpoints, JWT handling, password hashing, and unit tests."
+    },
+    {
+      "phase": 4,
+      "title": "Chat Core (Rooms & Messaging)",
+      "description": "Build room creation/list endpoints, message sending, and message history with pagination."
+    },
+    {
+      "phase": 5,
+      "title": "Real‑Time & UI",
+      "description": "Add Socket.IO server, presence tracking, and develop React frontend components for auth, room list, and chat window."
+    },
+    {
+      "phase": 6,
+      "title": "Testing & Deployment",
+      "description": "Write integration/e2e tests, configure Docker images, set up CI pipeline, and perform security hardening."
+    }
+  ],
+  "tasks": [
+    {
+      "id": "T1",
+      "title": "Initialize monorepo with root package.json and workspaces",
+      "description": "Create root package.json, set up pnpm workspaces for frontend and backend, and add basic scripts (dev, build, test).",
+      "phase": 1,
+      "featureIds": [],
+      "priority": "must",
+      "acceptance": [
+        "Repository cloned and `pnpm install` runs without errors",
+        "All workspaces are present"
+      ],
+      "status": "todo",
+      "notes": [],
+      "updatedAt": "2026-10-03T16:20:20.334Z"
+    },
+    {
+      "id": "T2",
+      "title": "Add README and contribution guidelines",
+      "description": "Write a comprehensive README covering setup, deployment, and API usage; add a CONTRIBUTING.md.",
+      "phase": 1,
+      "featureIds": [],
+      "priority": "must",
+      "acceptance": [
+        "README includes installation, running, and testing instructions",
+        "CONTRIBUTING outlines coding standards"
+      ],
+      "status": "todo",
+      "notes": [],
+      "updatedAt": "2026-10-03T16:20:20.334Z"
+    },
+    {
+      "id": "T3",
+      "title": "Design database schema and migration files",
+      "description": "Create SQL migration scripts for users, rooms, messages, and room_members tables with constraints and indexes.",
+      "phase": 2,
+      "featureIds": [],
+      "priority": "must",
+      "acceptance": [
+        "Migrations apply cleanly with `pnpm db:migrate`",
+        "Schema matches ER diagram"
+      ],
+      "status": "todo",
+      "notes": [],
+      "updatedAt": "2026-10-03T16:20:20.334Z"
+    },
+    {
+      "id": "T4",
+      "title": "Create users table",
+      "description": "Implement migration to create the users table with id, username, email, password_hash, and created_at columns.",
+      "phase": 2,
+      "featureIds": [
+        "F1"
+      ],
+      "priority": "must",
+      "acceptance": [
+        "Table exists in DB",
+        "Columns have correct types and constraints"
+      ],
+      "status": "todo",
+      "notes": [],
+      "updatedAt": "2026-10-03T16:20:20.334Z"
+    },
+    {
+      "id": "T5",
+      "title": "Create rooms table",
+      "description": "Implement migration to create the rooms table with id, name, description, created_by (FK to users), and created_at.",
+      "phase": 2,
+      "featureIds": [
+        "F2"
+      ],
+      "priority": "must",
+      "acceptance": [
+        "Table exists in DB",
+        "Foreign key constraint to users.id is enforced"
+      ],
+      "status": "todo",
+      "notes": [],
+      "updatedAt": "2026-10-03T16:20:20.334Z"
+    },
+    {
+      "id": "T6",
+      "title": "Create messages table",
+      "description": "Implement migration to create the messages table with id, room_id (FK to rooms), user_id (FK to users), content, and sent_at.",
+      "phase": 2,
+      "featureIds": [
+        "F3"
+      ],
+      "priority": "must",
+      "acceptance": [
+        "Table exists in DB",
+        "Foreign keys reference correct tables"
+      ],
+      "status": "todo",
+      "notes": [],
+      "updatedAt": "2026-10-03T16:20:20.334Z"
+    },
+    {
+      "id": "T7",
+      "title": "Create room_members join table",
+      "description": "Implement migration for room_members linking users and rooms with joined_at timestamp.",
+      "phase": 2,
+      "featureIds": [
+        "F2",
+        "F5"
+      ],
+      "priority": "must",
+      "acceptance": [
+        "Join table created",
+        "Composite uniqueness constraint on (room_id, user_id)"
+      ],
+      "status": "todo",
+      "notes": [],
+      "updatedAt": "2026-10-03T16:20:20.334Z"
+    },
+    {
+      "id": "T8",
+      "title": "Implement user registration endpoint",
+      "description": "Create POST /api/auth/register in auth controller, hash password, save user, return JWT.",
+      "phase": 3,
+      "featureIds": [
+        "F1"
+      ],
+      "priority": "must",
+      "acceptance": [
+        "Endpoint returns 201 with token on success",
+        "Password is stored as hash"
+      ],
+      "status": "todo",
+      "notes": [],
+      "updatedAt": "2026-10-03T16:20:20.334Z"
+    },
+    {
+      "id": "T9",
+      "title": "Implement login endpoint and JWT generation",
+      "description": "Create POST /api/auth/login, validate credentials, sign JWT with 24h expiry, return token.",
+      "phase": 3,
+      "featureIds": [
+        "F1"
+      ],
+      "priority": "must",
+      "acceptance": [
+        "Endpoint returns 200 with token for valid credentials",
+        "Invalid credentials return 401"
+      ],
+      "status": "todo",
+      "notes": [],
+      "updatedAt": "2026-10-03T16:20:20.334Z"
+    },
+    {
+      "id": "T10",
+      "title": "Write unit tests for authentication",
+      "description": "Add Jest tests for registration and login controllers, covering success and error cases.",
+      "phase": 6,
+      "featureIds": [
+        "F1"
+      ],
+      "priority": "must",
+      "acceptance": [
+        "All auth unit tests pass",
+        "Test coverage > 80% for auth module"
+      ],
+      "status": "todo",
+      "notes": [],
+      "updatedAt": "2026-10-03T16:20:20.334Z"
+    },
+    {
+      "id": "T11",
+      "title": "Implement create room endpoint",
+      "description": "Add POST /api/rooms handler that validates name, creates room, sets created_by from JWT, adds creator as member.",
+      "phase": 4,
+      "featureIds": [
+        "F2"
+      ],
+      "priority": "must",
+      "acceptance": [
+        "Room created and returned with ID",
+        "Creator automatically added as room member"
+      ],
+      "status": "todo",
+      "notes": [],
+      "updatedAt": "2026-10-03T16:20:20.334Z"
+    },
+    {
+      "id": "T12",
+      "title": "Implement list rooms endpoint",
+      "description": "Add GET /api/rooms that returns rooms the authenticated user has joined, with member count.",
+      "phase": 4,
+      "featureIds": [
+        "F2"
+      ],
+      "priority": "must",
+      "acceptance": [
+        "Endpoint returns list of rooms with name, description, member count",
+        "Only rooms user joined are shown"
+      ],
+      "status": "todo",
+      "notes": [],
+      "updatedAt": "2026-10-03T16:20:20.334Z"
+    },
+    {
+      "id": "T13",
+      "title": "Implement send message endpoint",
+      "description": "Add POST /api/messages that validates room_id and content, saves message, returns message object.",
+      "phase": 4,
+      "featureIds": [
+        "F3"
+      ],
+      "priority": "must",
+      "acceptance": [
+        "Message persisted and returned with ID and timestamp",
+        "Unauthorized room access returns 403"
+      ],
+      "status": "todo",
+      "notes": [],
+      "updatedAt": "2026-10-03T16:20:20.334Z"
+    },
+    {
+      "id": "T14",
+      "title": "Implement message history endpoint with pagination",
+      "description": "Add GET /api/rooms/:id/messages supporting query parameters page and limit, returns paginated messages.",
+      "phase": 4,
+      "featureIds": [
+        "F4"
+      ],
+      "priority": "should",
+      "acceptance": [
+        "Paginated response includes messages, total, page, limit",
+        "Invalid pagination defaults handled gracefully"
+      ],
+      "status": "todo",
+      "notes": [],
+      "updatedAt": "2026-10-03T16:20:20.334Z"
+    },
+    {
+      "id": "T15",
+      "title": "Implement presence tracking in database",
+      "description": "Add a presence table (or use Redis) to store user online status per room; create helper functions.",
+      "phase": 5,
+      "featureIds": [
+        "F5"
+      ],
+      "priority": "should",
+      "acceptance": [
+        "Presence data can be inserted/updated on connection",
+        "Presence can be queried for a room"
+      ],
+      "status": "todo",
+      "notes": [],
+      "updatedAt": "2026-10-03T16:20:20.334Z"
+    },
+    {
+      "id": "T16",
+      "title": "Set up Socket.IO server and middleware",
+      "description": "Initialize Socket.IO in Express, attach authentication middleware, and configure message and presence namespaces.",
+      "phase": 5,
+      "featureIds": [
+        "F6"
+      ],
+      "priority": "could",
+      "acceptance": [
+        "Socket.IO instance is listening on /socket.io",
+        "Authenticated sockets can join rooms"
+      ],
+      "status": "todo",
+      "notes": [],
+      "updatedAt": "2026-10-03T16:20:20.334Z"
+    },
+    {
+      "id": "T17",
+      "title": "Implement real‑time message broadcasting",
+      "description": "Handle incoming message events, persist to DB, and broadcast to all room subscribers via Socket.IO.",
+      "phase": 5,
+      "featureIds": [
+        "F3",
+        "F6"
+      ],
+      "priority": "could",
+      "acceptance": [
+        "Messages sent via Socket.IO appear instantly to all room subscribers",
+        "Broadcast includes sender ID and timestamp"
+      ],
+      "status": "todo",
+      "notes": [],
+      "updatedAt": "2026-10-03T16:20:20.334Z"
+    },
+    {
+      "id": "T18",
+      "title": "Build React login component",
+      "description": "Create LoginPage component with username/password fields, submit to /api/auth/login, store JWT in httpOnly cookie.",
+      "phase": 5,
+      "featureIds": [
+        "F1"
+      ],
+      "priority": "must",
+      "acceptance": [
+        "Login form renders and validates",
+        "Successful login redirects to room list"
+      ],
+      "status": "todo",
+      "notes": [],
+      "updatedAt": "2026-10-03T16:20:20.334Z"
+    },
+    {
+      "id": "T19",
+      "title": "Build React register component",
+      "description": "Create RegisterPage component with fields for username, email, password, submit to /api/auth/register.",
+      "phase": 5,
+      "featureIds": [
+        "F1"
+      ],
+      "priority": "must",
+      "acceptance": [
+        "Registration form renders and validates",
+        "Successful registration redirects to login"
+      ],
+      "status": "todo",
+      "notes": [],
+      "updatedAt": "2026-10-03T16:20:20.334Z"
+    },
+    {
+      "id": "T20",
+      "title": "Build React room list component",
+      "description": "Create RoomList component that fetches /api/rooms, displays rooms, and navigates to chat on selection.",
+      "phase": 5,
+      "featureIds": [
+        "F2"
+      ],
+      "priority": "must",
+      "acceptance": [
+        "Room list loads and shows each room's name and description",
+        "Clicking a room opens chat view"
+      ],
+      "status": "todo",
+      "notes": [],
+      "updatedAt": "2026-10-03T16:20:20.334Z"
+    },
+    {
+      "id": "T21",
+      "title": "Build React chat window component",
+      "description": "Create ChatWindow component that joins Socket.IO room, displays messages, and provides a message input.",
+      "phase": 5,
+      "featureIds": [
+        "F3",
+        "F4",
+        "F5"
+      ],
+      "priority": "must",
+      "acceptance": [
+        "Chat window shows messages in real time",
+        "New messages appear without page refresh"
+      ],
+      "status": "todo",
+      "notes": [],
+      "updatedAt": "2026-10-03T16:20:20.334Z"
+    },
+    {
+      "id": "T22",
+      "title": "Integrate JWT authentication into React routes",
+      "description": "Add protected route logic using the httpOnly cookie, redirect to login if missing token.",
+      "phase": 5,
+      "featureIds": [
+        "F1"
+      ],
+      "priority": "must",
+      "acceptance": [
+        "Protected routes require authentication",
+        "Unauthenticated user redirected to login"
+      ],
+      "status": "todo",
+      "notes": [],
+      "updatedAt": "2026-10-03T16:20:20.334Z"
+    },
+    {
+      "id": "T23",
+      "title": "Write integration tests for chat flow",
+      "description": "Create end‑to‑end tests using Supertest and Cypress covering registration, room creation, messaging, and presence.",
+      "phase": 6,
+      "featureIds": [
+        "F1",
+        "F2",
+        "F3",
+        "F5"
+      ],
+      "priority": "must",
+      "acceptance": [
+        "All integration tests pass",
+        "Scenarios cover happy path and error cases"
+      ],
+      "status": "todo",
+      "notes": [],
+      "updatedAt": "2026-10-03T16:20:20.334Z"
+    },
+    {
+      "id": "T24",
+      "title": "Configure Docker for backend and frontend",
+      "description": "Create Dockerfile and docker-compose for Node service and Nginx for React, define environment variables.",
+      "phase": 6,
+      "featureIds": [],
+      "priority": "must",
+      "acceptance": [
+        "Docker images build successfully",
+        "Services start and expose required ports"
+      ],
+      "status": "todo",
+      "notes": [],
+      "updatedAt": "2026-10-03T16:20:20.334Z"
+    },
+    {
+      "id": "T25",
+      "title": "Set up CI pipeline with GitHub Actions",
+      "description": "Create workflow that runs lint, tests, and builds on push to main, and deploys to staging environment.",
+      "phase": 6,
+      "featureIds": [],
+      "priority": "must",
+      "acceptance": [
+        "CI runs on PR and main",
+        "All checks pass automatically"
+      ],
+      "status": "todo",
+      "notes": [],
+      "updatedAt": "2026-10-03T16:20:20.334Z"
+    },
+    {
+      "id": "T26",
+      "title": "Add security hardening (helmet, rate limiting)",
+      "description": "Integrate helmet, express-rate-limit, and CORS policies to protect endpoints.",
+      "phase": 6,
+      "featureIds": [],
+      "priority": "should",
+      "acceptance": [
+        "Security headers present in responses",
+        "Rate limiting blocks excessive requests"
+      ],
+      "status": "todo",
+      "notes": [],
+      "updatedAt": "2026-10-03T16:20:20.334Z"
+    },
+    {
+      "id": "T27",
+      "title": "Implement performance monitoring (Prometheus exporter)",
+      "description": "Add a simple metrics endpoint exposing request count and latency for monitoring.",
+      "phase": 6,
+      "featureIds": [],
+      "priority": "could",
+      "acceptance": [
+        "Metrics endpoint returns JSON with counters",
+        "Metrics can be scraped by Prometheus"
+      ],
+      "status": "todo",
+      "notes": [],
+      "updatedAt": "2026-10-03T16:20:20.334Z"
+    }
+  ],
+  "edgeCases": [
+    "User attempts to send a message to a room they are not a member of",
+    "Duplicate messages due to network retries",
+    "Large message history causing pagination performance issues",
+    "Socket.IO connection drops and client reconnection",
+    "Concurrent room creation with same name",
+    "Invalid JWT token or token missing from request",
+    "Database connection failure during message persistence",
+    "Spam messages from a single user"
+  ],
+  "outOfScope": [
+    "Video or voice calling features",
+    "File upload and sharing",
+    "Advanced UI theming and custom branding",
+    "Admin dashboard for moderation",
+    "Push notifications to mobile devices",
+    "Multi‑device sync across browsers",
+    "Real‑time typing indicators (planned for future iteration)"
+  ]
+}

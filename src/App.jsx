@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
+import PrdStudioTool from './prd/PrdStudioTool.jsx'
 
 // ─── Inline SVG Icons ──────────────────────────────────────────────────────
 
@@ -1506,6 +1507,20 @@ export default function App() {
                 <span className="nav-badge" style={{ background: 'rgba(56, 139, 253, 0.15)', color: 'var(--accent-blue)' }}>AI</span>
               </button>
             </li>
+            <li>
+              <button
+                type="button"
+                className={`nav-item-btn ${activeTool === 'prd-studio' ? 'active' : ''}`}
+                onClick={() => {
+                  setActiveTool('prd-studio')
+                  setSidebarOpen(false)
+                }}
+              >
+                <span className="nav-icon"><BookOpenIcon /></span>
+                PRD & Kanban Studio
+                <span className="nav-badge" style={{ background: 'rgba(137, 87, 229, 0.15)', color: '#d2a8ff' }}>MCP</span>
+              </button>
+            </li>
           </ul>
 
           <div className="nav-section-title" style={{ marginTop: '16px' }}>Git & Code Tools</div>
@@ -1572,10 +1587,12 @@ export default function App() {
                     ? { background: 'linear-gradient(135deg, #388bfd, #1f6beb)', boxShadow: '0 2px 8px rgba(56, 139, 253, 0.35)' }
                     : activeTool === 'sholat'
                     ? { background: 'linear-gradient(135deg, #2ea043, #238636)', boxShadow: '0 2px 8px rgba(46, 160, 67, 0.35)' }
+                    : activeTool === 'prd-studio'
+                    ? { background: 'linear-gradient(135deg, #8957e5, #6e40c9)', boxShadow: '0 2px 8px rgba(137, 87, 229, 0.35)' }
                     : {}
                 }
               >
-                {activeTool === 'mini-ai' ? <SparklesIcon /> : activeTool === 'sholat' ? <MosqueIcon /> : <GitLabIcon />}
+                {activeTool === 'mini-ai' ? <SparklesIcon /> : activeTool === 'sholat' ? <MosqueIcon /> : activeTool === 'prd-studio' ? <BookOpenIcon /> : <GitLabIcon />}
               </div>
               <div className="header-text">
                 <h1>
@@ -1583,6 +1600,8 @@ export default function App() {
                     ? 'Mini AI Dev Assistant'
                     : activeTool === 'sholat'
                     ? 'Jadwal Sholat Kemenag RI'
+                    : activeTool === 'prd-studio'
+                    ? 'PRD & Kanban Studio'
                     : 'MR Description Generator'}
                 </h1>
                 <p>
@@ -1590,6 +1609,8 @@ export default function App() {
                     ? 'Copilot pintar untuk Conventional Commits, code review, refactoring & database'
                     : activeTool === 'sholat'
                     ? 'Jadwal sholat harian & bulanan akurat terintegrasi API Kemenag RI'
+                    : activeTool === 'prd-studio'
+                    ? 'Prompt → PRD, database design & Kanban yang bisa dikerjakan AI agent via MCP'
                     : 'Generate GitLab Merge Request descriptions instantly'}
                 </p>
               </div>
@@ -1603,6 +1624,8 @@ export default function App() {
             <MiniAiTool />
           ) : activeTool === 'sholat' ? (
             <JadwalSholatTool />
+          ) : activeTool === 'prd-studio' ? (
+            <PrdStudioTool apiKey={DEFAULT_OPENROUTER_KEY} model={FREE_MODEL} renderMarkdown={parseMarkdownToHtml} />
           ) : (
             <div className="workspace">
 
